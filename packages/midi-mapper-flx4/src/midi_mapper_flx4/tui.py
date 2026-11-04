@@ -20,9 +20,10 @@ from .diagram import WIDTH, render
 from .engine import Executor, Mapper, input_names
 from .flx4 import DEVICE, control_id, control_name, is_jog
 
-CLEAR, HIDE_CURSOR, SHOW_CURSOR = "\x1b[H\x1b[2J", "\x1b[?25l", "\x1b[?25h"
+CLEAR, HOME, HIDE_CURSOR, SHOW_CURSOR = "\x1b[H\x1b[2J", "\x1b[H", "\x1b[?25l", "\x1b[?25h"
+CLEAR_LINE, CLEAR_BELOW = "\x1b[K", "\x1b[J"
 BOLD, DIM, RESET = "\x1b[1m", "\x1b[2m", "\x1b[0m"
-SETTLE = 0.35  # seconds to keep listening after the first message, to tell a jog turn from a touch
+SETTLE = 0.35  # after the first message, keep refining the selection this long (a jog touch may become a turn)
 
 
 class Keys:
@@ -95,11 +96,17 @@ class MapperUI:
         self.selected: Control | None = None
         self.message = "Press a button, pad or knob on your FLX4."
         self.color = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+        self._cache: tuple[int, dict[Control, Mapping]] | None = None
+        self._drawn = False
 
     # ---------------------------------------------------------------- state
     def mappings(self) -> dict[Control, Mapping]:
+        """Current mappings, re-read only when the config file changes."""
         try:
-            return load_config(self.config).mappings
+            mtime = self.config.stat().st_mtime_ns
+            if self._cache is None or self._cache[0] != mtime:
+                self._cache = (mtime, load_config(self.config).mappings)
+            return self._cache[1]
         except (OSError, ConfigError):
             return {}
 
@@ -127,7 +134,7 @@ class MapperUI:
     # -------------------------------------------------------------- drawing
     def draw(self) -> None:
         maps = self.mappings()
-        out = [CLEAR, render({control_id(c) for c in maps}, self.selected, color=self.color), ""]
+        out = [render({control_id(c) for c in maps}, self.selected, color=self.color), ""]
         if self.selected:
             c = self.selected
             current = maps.get(c)
@@ -144,8 +151,12 @@ class MapperUI:
         out.append("")
         out.append(f"  {self.message}")
         if not self.color:
-            out[0] = ""
-        sys.stdout.write(HIDE_CURSOR + "\n".join(out) + "\n")
+            sys.stdout.write("\n".join(out) + "\n")
+        else:
+            # Repaint in place (no full clear) so the terminal only redraws what changed.
+            start = HOME if self._drawn else CLEAR
+            sys.stdout.write(HIDE_CURSOR + start + "\n".join(line + CLEAR_LINE for line in out) + "\n" + CLEAR_BELOW)
+        self._drawn = True
         sys.stdout.flush()
 
     # ------------------------------------------------------------- prompts
@@ -237,18 +248,23 @@ class MapperUI:
                     if now - last_flag > 2:  # keep the running mapper from firing what you press
                         flag.write_text(str(time.time() + 10))
                         last_flag = now
+                    changed = False
                     for msg in port.iter_pending():
                         ctrl = Control.from_message(msg)
                         if ctrl and ctrl not in seen:
                             if not seen:
                                 settle_until = now + SETTLE
                             seen.append(ctrl)
+                            changed = True
+                    if changed:  # light up right away; later messages in the window can refine the choice
+                        pick = service.pick_control(seen)
+                        if pick != self.selected:
+                            self.selected = pick
+                            self.message = "Choose what it should do, or press another control."
+                            self.draw()
                     if seen and now >= settle_until:
-                        self.selected = service.pick_control(seen)
-                        self.message = "Choose what it should do, or press another control."
                         seen = []
-                        self.draw()
-                    key = keys.read(0.02)
+                    key = keys.read(0.005)
                     if key is None:
                         continue
                     key = key.lower()
@@ -258,6 +274,7 @@ class MapperUI:
                         self.ask(keys, key)
                         for _ in port.iter_pending():  # ignore anything pressed while typing
                             pass
+                        self._drawn = False  # the prompt scrolled the screen; start clean
                         self.draw()
         finally:
             with contextlib.suppress(OSError):

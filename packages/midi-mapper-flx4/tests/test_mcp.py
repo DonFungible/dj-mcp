@@ -42,7 +42,7 @@ def test_pick_control():
     assert service.pick_control([touch]) == touch
     msb, lsb = Control("cc", 7, 31), Control("cc", 7, 63)
     assert service.pick_control([lsb, msb]) == msb  # 14-bit fader: the MSB, whichever arrives first
-    assert service.pick_control([Control("note", 1, 11), Control("note", 1, 12)]) == Control("note", 1, 11)
+    assert service.pick_control([Control("note", 1, 11), Control("note", 1, 12)]) == Control("note", 1, 12)
 
 
 @pytest.fixture

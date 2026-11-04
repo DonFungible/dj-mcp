@@ -126,7 +126,9 @@ def pick_control(seen: list[Control]) -> Control:
     jog = next((c for c in seen if is_jog(c)), None)
     if jog:
         return jog
-    return coarse(seen[0])  # a knob that only moved a little may send just its fine (n + 32) half
+    # The most recent control: pressing a second button quickly means you meant that one. A knob that only moved
+    # a little may send just its fine (n + 32) half, which coarse() maps back to the knob.
+    return coarse(seen[-1])
 
 
 def capture(port_name: str, config: Path, timeout: float) -> Control | None:
