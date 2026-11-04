@@ -91,24 +91,26 @@ uvx --python 3.12 midi-mapper-flx4 map
 This draws the FLX4 in your terminal. Press any button, pad, knob or jog wheel and it lights up, with its name
 and what it does now. Then press a letter to choose an action (`a` open an app, `k` key combo, `t` type text,
 `c` shell command; `s` scroll for jog wheels), `x` to remove a mapping, `r` to try it, or just press another
-control. Mapped controls are shown in green and in parentheses:
+control. Mapped controls are shown in green and in parentheses, the selected one is highlighted:
 
 ```
-╭───────────────────────────────────── Pioneer DDJ-FLX4 ─────────────────────────────────────╮
-│                                       [ BEAT FX ON ]                                       │
-│  [LOOP IN] [LOOP OUT]  [ SYNC ]   [LOAD] [BROWSE] [LOAD]   [LOOP IN] [LOOP OUT]  [ SYNC ]  │
-│  DECK 1                                                    DECK 2                          │
-│    ║     .-~~~~~~~~~~~-.          [ TRIM][MASTER][ TRIM]           .-~~~~~~~~~~~-.    ║    │
-│    ║    /               \         [  HI ][PHONES][  HI ]          /               \   ║    │
-│    ║   |    (  JOG  )    |        [ MID ][HP MIX][ MID ]         |    [  JOG  ]    |  ║    │
-│    ║    \               /         [ LOW ]        [ LOW ]          \               /   ║    │
-│    ║     '-~~~~~~~~~~~-'          [ CFX ]        [ CFX ]           '-~~~~~~~~~~~-'    ║    │
-│ [TEMPO]                           [ CUE ]        [ CUE ]                           [TEMPO] │
-│  [HOTCUE][PADFX][JUMP][SAMPLE]       ║              ║      [HOTCUE][PADFX][JUMP][SAMPLE]   │
-│  (  1  )[  2  ][  3  ][  4  ]     [FADER]        [FADER]   [  1  ][  2  ][  3  ][  4  ]    │
-│  [  5  ][  6  ][  7  ][  8  ]               ╪              [  5  ][  6  ][  7  ][  8  ]    │
-│  [ CUE ] ( PLAY )                    [  CROSSFADER  ]      [ CUE ] » PLAY «                │
-╰────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Deck 1 ─────────────────────────┬─ Mixer ────────────────┬─ Deck 2 ─────────────────────────╮
+│                                  │        Beat FX         │                                  │
+│            Loop in   Loop out    │ ◀ Load  Browse  Load ▶ │    Loop in   Loop out            │
+│  Sync        .-~~~~~~~~~-.       │                        │      .-~~~~~~~~~-.        Sync   │
+│    ┬       /               \     │  Trim   Master   Trim  │    /               \        ┬    │
+│    │      |      (Jog)      |    │   Hi    Phones    Hi   │   |       Jog       |       │    │
+│    ╪      |                 |    │  Mid    HP mix   Mid   │   |                 |       ╪    │
+│    ┴       \               /     │  Low             Low   │    \               /        ┴    │
+│  Tempo       '-~~~~~~~~~-'       │  CFX             CFX   │      '-~~~~~~~~~-'        Tempo  │
+│                                  │ HP cue          HP cue │                                  │
+│ Hot cue  Pad FX   Jump   Sample  │   ┬               ┬    │ Hot cue  Pad FX   Jump   Sample  │
+│  ( 1 )     2       3       4     │   ╪               ╪    │    1       2       3       4     │
+│    5       6       7       8     │   ┴               ┴    │    5       6       7       8     │
+│                                  │ Fader   ├──╪──┤ Fader  │                                  │
+│   Cue    (Play)                  │       Crossfader       │   Cue    »Play«                  │
+╰──────────────────────────────────┴────────────────────────┴──────────────────────────────────╯
+  (Play) mapped    »Play« selected    press a control to select it
 ```
 
 Here deck 1's Play, deck 1's jog wheel and pad 1 are mapped, and deck 2's Play was just pressed. While `map` is

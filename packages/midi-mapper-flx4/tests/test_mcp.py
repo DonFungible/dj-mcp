@@ -106,7 +106,7 @@ def test_wait_for_button(mcp_env):
         threading.Thread(target=press, daemon=True).start()
         res = server.wait_for_button(timeout_seconds=10)
     assert res["id"] == "cc:1:34" and res["kind"] == "jog wheel" and res["current_mapping"] is None
-    assert "»  JOG  «" in res["diagram"]
+    assert "»Jog«" in res["diagram"]
     assert not service.learning_active(mcp_env)
 
 

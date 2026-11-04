@@ -1,11 +1,12 @@
 """An ASCII drawing of the DDJ-FLX4 that marks mapped controls and the one being pressed.
 
-Each control on the drawing is a "widget": a bracketed label at a fixed spot, tied to the MIDI controls it
-stands for. Widgets keep their width in every state, so the layout never shifts:
+The drawing follows the hardware: two decks (jog wheel, loop buttons, sync and tempo on the outer edge, mode
+buttons, eight pads, play and cue) around a mixer (browse and load, channel knobs, headphone cues, channel
+faders, crossfader). Controls recede until they matter:
 
-    [PLAY]   not mapped        (PLAY)   mapped        »PLAY«   pressed / selected
+     Play     not mapped        (Play)   mapped        »Play«   pressed / selected
 
-With color, mapped widgets are green and the pressed one is highlighted.
+With color, mapped controls are green and the pressed one is highlighted; the frame and decoration are dim.
 """
 
 from __future__ import annotations
@@ -15,99 +16,107 @@ from dataclasses import dataclass, field
 from .config import Control
 from .flx4 import PAD_CHANNELS, coarse
 
-DECK_W = 32
-MIXER_W = 22
-WIDTH = 1 + DECK_W + 2 + MIXER_W + 2 + DECK_W + 1
-ROWS = 13
-MIXER_X = 1 + DECK_W + 2
-DECK_X = {1: 1, 2: MIXER_X + MIXER_W + 2}
+DECK_W, MIXER_W = 34, 24
+SECTIONS = {"deck1": 0, "mixer": DECK_W + 1, "deck2": DECK_W + 1 + MIXER_W + 1}  # x offset inside the frame
+WIDTH = DECK_W + 1 + MIXER_W + 1 + DECK_W  # inner width
+ROWS = 14
 
-RESET, DIM, GREEN, HILITE = "\x1b[0m", "\x1b[2m", "\x1b[32m", "\x1b[1;30;43m"
+RESET, DIM, GREEN, HILITE, BOLD = "\x1b[0m", "\x1b[2m", "\x1b[32m", "\x1b[1;30;43m", "\x1b[1m"
+LEGEND = "(Play) mapped    »Play« selected    press a control to select it"
 
 
 @dataclass
 class Widget:
     key: str
     row: int
-    col: int
-    width: int
+    col: int  # left edge of the cell the label is centered in
+    cell: int  # cell width
     label: str
     ids: set[str] = field(default_factory=set)
+
+    @property
+    def start(self) -> int:
+        return self.col + (self.cell - len(self.label) - 2) // 2
 
 
 def _id(kind: str, channel: int, number: int) -> str:
     return f"{kind}:{channel}:{number}"
 
 
-def _deck(d: int) -> list[Widget]:
-    x = DECK_X[d]
+# ---- layout -----------------------------------------------------------------------------------------
+
+JOG = [
+    "   .-~~~~~~~~~-.   ",
+    " /               \\ ",
+    "|                 |",
+    "|                 |",
+    " \\               / ",
+    "   '-~~~~~~~~~-'   ",
+]
+JOG_TOP = 2
+
+
+def _deck(d: int) -> tuple[list[Widget], list[tuple[int, int, str]]]:
+    x = SECTIONS[f"deck{d}"]
     n = lambda num: _id("note", d, num)  # noqa: E731
     pad_channels = [ch for ch, (deck, _) in PAD_CHANNELS.items() if deck == d]
-    tempo_x = x if d == 1 else x + DECK_W - 7
+    # Sync and tempo sit on the outer edge (left on deck 1, right on deck 2); the jog wheel fills the rest.
+    edge = x + 1 if d == 1 else x + DECK_W - 8
+    main = x + 9 if d == 1 else x + 1
+    jog_x = main + (24 - len(JOG[0])) // 2
     widgets = [
-        Widget(f"lin{d}", 1, x + 1, 9, "LOOP IN", {n(16)}),
-        Widget(f"lout{d}", 1, x + 11, 10, "LOOP OUT", {n(17)}),
-        Widget(f"sync{d}", 1, x + 23, 8, "SYNC", {n(88)}),
-        Widget(f"jog{d}", 5, x + 12, 9, "JOG", {_id("cc", d, 33), _id("cc", d, 34), n(54)}),
-        Widget(f"tempo{d}", 8, tempo_x, 7, "TEMPO", {_id("cc", d, 0)}),
-        Widget(f"hc{d}", 9, x + 1, 8, "HOTCUE", {n(27)}),
-        Widget(f"pfx{d}", 9, x + 9, 7, "PADFX", {n(30)}),
-        Widget(f"bj{d}", 9, x + 16, 6, "JUMP", {n(32)}),
-        Widget(f"smp{d}", 9, x + 22, 8, "SAMPLE", {n(34)}),
-        Widget(f"cue{d}", 12, x + 1, 7, "CUE", {n(12), n(72)}),
-        Widget(f"play{d}", 12, x + 9, 8, "PLAY", {n(11), n(71)}),
+        Widget(f"lin{d}", 1, main + 1, 11, "Loop in", {n(16)}),
+        Widget(f"lout{d}", 1, main + 12, 11, "Loop out", {n(17)}),
+        Widget(f"jog{d}", JOG_TOP + 2, jog_x, len(JOG[0]), "Jog", {_id("cc", d, 33), _id("cc", d, 34), n(54)}),
+        Widget(f"sync{d}", 2, edge, 7, "Sync", {n(88)}),
+        Widget(f"tempo{d}", 7, edge, 7, "Tempo", {_id("cc", d, 0)}),
+        Widget(f"cue{d}", 13, x + 1, 8, "Cue", {n(12), n(72)}),
+        Widget(f"play{d}", 13, x + 9, 8, "Play", {n(11), n(71)}),
     ]
+    for i, (label, num) in enumerate((("Hot cue", 27), ("Pad FX", 30), ("Jump", 32), ("Sample", 34))):
+        widgets.append(Widget(("hc", "pfx", "bj", "smp")[i] + str(d), 9, x + 1 + i * 8, 8, label, {n(num)}))
     for k in range(8):
-        row, col = (10, k) if k < 4 else (11, k - 4)
+        row, colno = (10, k) if k < 4 else (11, k - 4)
         ids = {_id("note", ch, mode * 16 + k) for ch in pad_channels for mode in range(8)}
-        widgets.append(Widget(f"pad{d}_{k + 1}", row, x + 1 + col * 7, 7, str(k + 1), ids))
-    return widgets
+        widgets.append(Widget(f"pad{d}_{k + 1}", row, x + 1 + colno * 8, 8, f" {k + 1} ", ids))
+    art = [(JOG_TOP + i, jog_x, line) for i, line in enumerate(JOG)]
+    rail = edge + 3
+    art += [(3, rail, "┬"), (4, rail, "│"), (5, rail, "╪"), (6, rail, "┴")]
+    return widgets, art
 
 
-def _mixer() -> list[Widget]:
-    x = MIXER_X
+def _mixer() -> tuple[list[Widget], list[tuple[int, int, str]]]:
+    x = SECTIONS["mixer"]
+    left, mid, right = x, x + 8, x + 16
     widgets = [
-        Widget("beatfx", 0, x + 4, 14, "BEAT FX ON", {_id("note", 5, 71)}),
-        Widget("load1", 1, x, 6, "LOAD", {_id("note", 7, 70)}),
-        Widget("browse", 1, x + 7, 8, "BROWSE", {_id("cc", 7, 64)}),
-        Widget("load2", 1, x + 16, 6, "LOAD", {_id("note", 7, 71)}),
-        Widget("master", 3, x + 7, 8, "MASTER", {_id("cc", 7, 8)}),
-        Widget("phones", 4, x + 7, 8, "PHONES", {_id("cc", 7, 13)}),
-        Widget("hpmix", 5, x + 7, 8, "HP MIX", {_id("cc", 7, 12)}),
-        Widget("xfader", 12, x + 3, 16, "CROSSFADER", {_id("cc", 7, 31)}),
+        Widget("beatfx", 0, x, MIXER_W, "Beat FX", {_id("note", 5, 71)}),
+        Widget("load1", 1, left, 8, "◀ Load", {_id("note", 7, 70)}),
+        Widget("browse", 1, mid, 8, "Browse", {_id("cc", 7, 64)}),
+        Widget("load2", 1, right, 8, "Load ▶", {_id("note", 7, 71)}),
+        Widget("master", 3, mid, 8, "Master", {_id("cc", 7, 8)}),
+        Widget("phones", 4, mid, 8, "Phones", {_id("cc", 7, 13)}),
+        Widget("hpmix", 5, mid, 8, "HP mix", {_id("cc", 7, 12)}),
+        Widget("xfader", 13, x, MIXER_W, "Crossfader", {_id("cc", 7, 31)}),
     ]
-    for d, col in ((1, x), (2, x + 15)):
-        for row, label, cc in ((3, "TRIM", 4), (4, "HI", 7), (5, "MID", 11), (6, "LOW", 15)):
-            widgets.append(Widget(f"{label.lower()}{d}", row, col, 7, label, {_id("cc", d, cc)}))
-        widgets.append(Widget(f"cfx{d}", 7, col, 7, "CFX", {_id("cc", 7, 22 + d)}))
-        widgets.append(Widget(f"hp{d}", 8, col, 7, "CUE", {_id("note", d, 84)}))
-        widgets.append(Widget(f"fader{d}", 10, col, 7, "FADER", {_id("cc", d, 19)}))
-    return widgets
+    for d, col in ((1, left), (2, right)):
+        for row, label, cc in ((3, "Trim", 4), (4, "Hi", 7), (5, "Mid", 11), (6, "Low", 15)):
+            widgets.append(Widget(f"{label.lower()}{d}", row, col, 8, label, {_id("cc", d, cc)}))
+        widgets.append(Widget(f"cfx{d}", 7, col, 8, "CFX", {_id("cc", 7, 22 + d)}))
+        widgets.append(Widget(f"hp{d}", 8, col, 8, "HP cue", {_id("note", d, 84)}))
+        widgets.append(Widget(f"fader{d}", 12, col, 8, "Fader", {_id("cc", d, 19)}))
+    art = []
+    for col in (left + 3, right + 3):
+        art += [(9, col, "┬"), (10, col, "╪"), (11, col, "┴")]
+    art.append((12, mid, " ├──╪──┤"))
+    return widgets, art
 
 
-WIDGETS: list[Widget] = _deck(1) + _deck(2) + _mixer()
+_d1, _a1 = _deck(1)
+_d2, _a2 = _deck(2)
+_mx, _am = _mixer()
+WIDGETS: list[Widget] = _d1 + _d2 + _mx
+ART: list[tuple[int, int, str]] = _a1 + _a2 + _am
 BY_ID: dict[str, Widget] = {i: w for w in WIDGETS for i in w.ids}
-
-JOG_ART = [
-    (3, "  .-~~~~~~~~~~~-.  "),
-    (4, " /               \\ "),
-    (5, "|                 |"),
-    (6, " \\               / "),
-    (7, "  '-~~~~~~~~~~~-'  "),
-]
-
-
-def _decorations() -> list[tuple[int, int, str]]:
-    out = []
-    for d, x in DECK_X.items():
-        out += [(row, x + 7, art) for row, art in JOG_ART]
-        rail = x + 3 if d == 1 else x + DECK_W - 4
-        out += [(row, rail, "║") for row in range(3, 8)]
-        out.append((2, x + 1, f"DECK {d}"))
-    for col in (MIXER_X + 3, MIXER_X + 18):
-        out.append((9, col, "║"))
-    out.append((11, MIXER_X + 10, "╪"))
-    return out
 
 
 def widget_for(c: Control) -> Widget | None:
@@ -115,45 +124,72 @@ def widget_for(c: Control) -> Widget | None:
     return BY_ID.get(f"{c.kind}:{c.channel}:{c.number}")
 
 
+# ---- drawing ----------------------------------------------------------------------------------------
+
+
+def _frame_top() -> str:
+    parts = []
+    for name, width in (("Deck 1", DECK_W), ("Mixer", MIXER_W), ("Deck 2", DECK_W)):
+        parts.append(f"─ {name} ".ljust(width, "─"))
+    return "╭" + "┬".join(parts) + "╮"
+
+
+def _frame_bottom() -> str:
+    return "╰" + "┴".join("─" * w for w in (DECK_W, MIXER_W, DECK_W)) + "╯"
+
+
 def render(
     mapped: set[str] | None = None,
     pressed: Control | None = None,
     color: bool = False,
-    title: str = " Pioneer DDJ-FLX4 ",
+    legend: bool = True,
 ) -> str:
     """The controller drawing. `mapped` holds control ids ("note:1:11") that have a mapping."""
     mapped = mapped or set()
     grid = [[" "] * WIDTH for _ in range(ROWS)]
-    styles: dict[tuple[int, int], tuple[str, int]] = {}  # (row, col) -> (style, length)
+    style = [[""] * WIDTH for _ in range(ROWS)]
 
-    def put(row: int, col: int, text: str) -> None:
+    def put(row: int, col: int, text: str, s: str = "") -> None:
         for i, ch in enumerate(text):
             if 0 <= col + i < WIDTH:
                 grid[row][col + i] = ch
+                style[row][col + i] = s
 
-    for row, col, text in _decorations():
-        put(row, col, text)
+    for row, col, text in ART:
+        put(row, col, text, DIM)
     hot = widget_for(pressed) if pressed else None
     for w in WIDGETS:
-        state = "pressed" if w is hot else "mapped" if w.ids & mapped else "plain"
-        left, right = {"pressed": ("»", "«"), "mapped": ("(", ")"), "plain": ("[", "]")}[state]
-        put(w.row, w.col, left + w.label.center(w.width - 2)[: w.width - 2] + right)
-        if color:
-            styles[(w.row, w.col)] = ({"pressed": HILITE, "mapped": GREEN, "plain": DIM}[state], w.width)
+        if w is hot:
+            put(w.row, w.start, f"»{w.label}«", HILITE)
+        elif w.ids & mapped:
+            put(w.row, w.start, f"({w.label})", GREEN)
+        else:
+            put(w.row, w.start, f" {w.label} ")
 
+    divider = f"{DIM}│{RESET}" if color else "│"
     lines = []
-    for r, cells in enumerate(grid):
-        line = ""
-        c = 0
-        while c < WIDTH:
-            if (r, c) in styles:
-                style, length = styles[(r, c)]
-                line += style + "".join(cells[c : c + length]) + RESET
-                c += length
-            else:
-                line += cells[c]
-                c += 1
-        lines.append("│" + line + "│")
-    top = "╭" + title.center(WIDTH, "─") + "╮"
-    bottom = "╰" + "─" * WIDTH + "╯"
-    return "\n".join([top, *lines, bottom])
+    for r in range(ROWS):
+        line, current = "", ""
+        for c in range(WIDTH):
+            if c in (SECTIONS["mixer"] - 1, SECTIONS["deck2"] - 1):
+                if color and current:
+                    line += RESET
+                    current = ""
+                line += divider
+                continue
+            s = style[r][c] if color else ""
+            if s != current:
+                line += RESET if current else ""
+                line += s
+                current = s
+            line += grid[r][c]
+        if current:
+            line += RESET
+        lines.append(f"{divider}{line}{divider}")
+    top, bottom = _frame_top(), _frame_bottom()
+    if color:
+        top, bottom = DIM + top + RESET, DIM + bottom + RESET
+    out = [top, *lines, bottom]
+    if legend:
+        out.append(f"  {DIM}{LEGEND}{RESET}" if color else f"  {LEGEND}")
+    return "\n".join(out)

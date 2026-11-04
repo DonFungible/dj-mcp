@@ -7,16 +7,16 @@ from midi_mapper_flx4.service import pick_control
 
 
 def test_layout_is_a_clean_box():
-    lines = render().splitlines()
+    lines = render(legend=False).splitlines()
     assert {len(line) for line in lines} == {WIDTH + 2}
-    spots = [(w.row, w.col + i) for w in WIDGETS for i in range(w.width)]
+    spots = [(w.row, w.start + i) for w in WIDGETS for i in range(len(w.label) + 2)]
     assert len(spots) == len(set(spots)), "widgets overlap"
 
 
 def test_states_keep_the_layout():
     plain = render()
     marked = render({"note:1:12"}, pressed=Control("note", 1, 11))
-    assert "( CUE )" in marked and "» PLAY «" in marked
+    assert "(Cue)" in marked and "»Play«" in marked and "(Play) mapped" in marked  # legend explains the marks
     assert len(plain) == len(marked)
     colored = render({"note:1:12"}, pressed=Control("note", 1, 11), color=True)
     assert re.sub(r"\x1b\[[0-9;]*m", "", colored) == marked

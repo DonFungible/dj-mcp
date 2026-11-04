@@ -31,7 +31,7 @@ mcp = MCPServer(
         "To map a button: first tell the user to press the button on their FLX4 (the call waits for it), then "
         "call wait_for_button, then map_button with the returned control id. wait_for_button and status return "
         "an ASCII drawing of the controller: show it to the user in a code block, so they can see which control "
-        "was pressed (»PLAY«) and which are mapped ((PLAY)). Turn the request into the "
+        "was pressed (»Play«) and which are mapped ((Play)). Turn the request into the "
         "simplest action: 'open Discord' -> app 'Discord'; a shortcut -> keys like 'cmd+shift+m'; typing -> "
         "text; anything else -> a shell command. Prefer app and keys over shell. Don't map a shell command the "
         "user didn't ask for, and say what a shell command does before mapping it. Mappings only work while the "
