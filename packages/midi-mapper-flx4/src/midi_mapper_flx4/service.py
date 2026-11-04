@@ -10,6 +10,7 @@ Files next to the config:
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import signal
 import subprocess
@@ -55,13 +56,41 @@ def running_pid(config: Path) -> int | None:
 
 
 def claim(config: Path) -> None:
-    """Record this process as the mapper. Raises if another mapper already runs."""
+    """Record this process as the mapper (and whether macOS lets it send keystrokes). Raises if another runs."""
+    from .engine import accessibility_trusted
+
     other = running_pid(config)
     if other:
         raise RuntimeError(
             f"another mapper is already running (pid {other}). Stop it with `midi-mapper-flx4 stop` first."
         )
     pid_file(config).write_text(str(os.getpid()))
+    trusted = accessibility_trusted()
+    status_file(config).write_text(json.dumps({"pid": os.getpid(), "accessibility": trusted}))
+
+
+def status_file(config: Path) -> Path:
+    return Path(config).parent / "mapper.status"
+
+
+def mapper_can_type(config: Path) -> bool | None:
+    """Whether the running mapper may send keystrokes and scroll (None if unknown or not running)."""
+    pid = running_pid(config)
+    if not pid:
+        return None
+    try:
+        status = json.loads(status_file(config).read_text())
+    except (OSError, ValueError):
+        return None
+    return status.get("accessibility") if status.get("pid") == pid else None
+
+
+KEYSTROKE_HELP = (
+    "The mapper can't send keystrokes or scroll: macOS hasn't given Accessibility permission to the app that "
+    "started it (your terminal). Allow it in System Settings > Privacy & Security > Accessibility, then restart "
+    "the mapper (midi-mapper-flx4 stop, then start it again from that terminal). Opening apps and shell "
+    "commands work without it."
+)
 
 
 def release(config: Path) -> None:

@@ -128,6 +128,9 @@ def test_background_mapper_start_stop(tmp_path):
     try:
         assert service.running_pid(cfg) == pid
         assert service.start_background(cfg) == pid  # idempotent
+        from midi_mapper_flx4.engine import accessibility_trusted
+
+        assert service.mapper_can_type(cfg) == accessibility_trusted()  # the mapper reports its own permission
         from midi_mapper_flx4.runtime import Runtime
 
         with pytest.raises(RuntimeError, match="already running"):  # one mapper at a time

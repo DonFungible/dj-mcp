@@ -157,6 +157,15 @@ class MapperUI:
             out += ["", "", "  [q] quit"]
         out.append("")
         out.append(f"  {self.message}")
+        out.append("")
+        if not service.running_pid(self.config):
+            out.append(
+                f"  {DIM}The mapper isn't running, so mappings do nothing yet. It's offered when you quit.{RESET}"
+            )
+        else:
+            out.append(f"  {DIM}Your mappings are paused while this screen is open; quit (q) to use them.{RESET}")
+            if service.mapper_can_type(self.config) is False:
+                out.append("  ! " + service.KEYSTROKE_HELP)
         if not self.color:
             sys.stdout.write("\n".join(out) + "\n")
         else:

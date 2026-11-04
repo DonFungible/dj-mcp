@@ -107,6 +107,7 @@ def status() -> dict[str, Any]:
         "connected": any(cfg.device.lower() in n.lower() for n in input_names()),
         "mapper_running": pid is not None,
         "mapper_pid": pid,
+        "mapper_can_send_keys": service.mapper_can_type(config_path),
         "accessibility": trusted,
         "accessibility_note": (
             "macOS is blocking keystrokes and scrolling: the user must allow their terminal (or the app running "
@@ -207,7 +208,9 @@ def map_button(
     replaced = _config().mappings.get(ctrl)
     _editor().save_mapping(m)
     result = {"saved": _describe(m), "replaced": _describe(replaced) if replaced else None, **_ensure_mapper()}
-    if action in ("keys", "text", "scroll", "turn") and accessibility_trusted() is False:
+    if action in ("keys", "text", "scroll", "turn") and service.mapper_can_type(config_path) is False:
+        result["warning"] = service.KEYSTROKE_HELP
+    elif action in ("keys", "text", "scroll", "turn") and accessibility_trusted() is False:
         result["warning"] = (
             "macOS Accessibility permission is missing, so this mapping won't do anything yet. Allow the terminal "
             "in System Settings > Privacy & Security > Accessibility, then restart the mapper."

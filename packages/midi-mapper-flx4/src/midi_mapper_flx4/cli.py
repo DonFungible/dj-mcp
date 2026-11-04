@@ -103,6 +103,14 @@ def cmd_status(args) -> None:
     pid = running_pid(args.config)
     connected = any(DEFAULT_DEVICE.lower() in n.lower() for n in _input_names())
     print(f"mapper: {'running (pid ' + str(pid) + ')' if pid else 'not running'}")
+    if pid:
+        from .service import KEYSTROKE_HELP, mapper_can_type
+
+        can_type = mapper_can_type(args.config)
+        if can_type is False:
+            print(f"keystrokes: blocked. {KEYSTROKE_HELP}")
+        elif can_type:
+            print("keystrokes: allowed")
     print(f"{DEFAULT_DEVICE}: {'connected' if connected else 'not connected'}")
     print(f"config: {args.config}")
 
