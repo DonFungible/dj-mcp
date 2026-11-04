@@ -1,0 +1,60 @@
+{
+  "name": "serato-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Serato DJ Pro: library, crates, cues, history, harmonic mix planning and MIDI deck control",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "serato",
+    "dj",
+    "crates",
+    "harmonic-mixing",
+    "midi",
+    "claude"
+  ],
+  "homepage": "https://github.com/DonFungible/dj-mcp/tree/main/packages/serato-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/DonFungible/dj-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DonFungible/dj-mcp.git",
+    "directory": "packages/serato-mcp"
+  },
+  "license": "MIT",
+  "author": "Don Fung",
+  "type": "module",
+  "bin": {
+    "serato-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "test": "node --import tsx --test test/unit.test.ts test/midi.test.ts",
+    "build": "tsc -p .",
+    "start": "node dist/index.js",
+    "test:e2e": "npm run build && BACKEND=legacy node test/e2e.mjs && BACKEND=sqlite node test/e2e.mjs",
+    "test:live": "npm run build && node test/live-readonly.mjs",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "dependencies": {
+    "@julusian/midi": "^3.8.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "music-metadata": "^12.3.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

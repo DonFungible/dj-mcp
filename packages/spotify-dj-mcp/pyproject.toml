@@ -1,0 +1,46 @@
+[project]
+name = "spotify-dj-mcp"
+version = "0.1.0"
+description = "MCP server for your Spotify playlists and Liked Songs, with DJ-set building via your rekordbox library"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Don Fung" }]
+keywords = ["mcp", "spotify", "dj", "rekordbox", "playlists", "claude", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "mcp>=2.0,<3",
+    "httpx>=0.27",
+    "rekordbox-mcp>=0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/DonFungible/dj-mcp/tree/main/packages/spotify-dj-mcp"
+Repository = "https://github.com/DonFungible/dj-mcp"
+Issues = "https://github.com/DonFungible/dj-mcp/issues"
+
+[project.scripts]
+spotify-dj-mcp = "spotify_dj_mcp.server:main"
+
+[tool.uv.sources]
+rekordbox-mcp = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spotify_dj_mcp"]

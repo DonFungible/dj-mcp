@@ -1,0 +1,32 @@
+[project]
+name = "dj-mcp"
+version = "0.1.0"
+description = "MCP servers for DJ software (Rekordbox, Serato, ...)"
+requires-python = ">=3.11"
+dependencies = ["rekordbox-mcp", "midi-mapper-flx4", "spotify-dj-mcp"]
+
+[tool.uv.sources]
+rekordbox-mcp = { workspace = true }
+midi-mapper-flx4 = { workspace = true }
+spotify-dj-mcp = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*"]
+exclude = ["packages/serato-mcp"]  # a Node.js package, managed with npm
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["rekordbox_mcp", "midi_mapper_flx4", "spotify_dj_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+norecursedirs = ["node_modules", "dist", ".*"]

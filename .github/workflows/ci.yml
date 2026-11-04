@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ALSA (python-rtmidi on Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --python ${{ matrix.python }}
+      - run: uv run pytest -q
+
+  # The MCP servers don't depend on python-rtmidi, so they also run on newer Pythons.
+  test-servers-latest-python:
+    name: test ${{ matrix.package }} (${{ matrix.os }}, py3.13)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        package: [rekordbox-mcp, spotify-dj-mcp]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --package ${{ matrix.package }} --python 3.13
+      - run: uv run --no-sync --with pytest pytest -q packages/${{ matrix.package }}
+
+  serato-mcp:
+    # macOS-only package (AppleScript, CoreMIDI). Needs Node 22.13+ for node:sqlite.
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: packages/serato-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/serato-mcp/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm pack --dry-run
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build --all-packages --out-dir dist
+      - run: uvx twine check --strict dist/*

@@ -1,0 +1,41 @@
+[project]
+name = "rekordbox-mcp"
+version = "0.1.0"
+description = "MCP server for the Pioneer rekordbox 6/7 library"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Don Fung" }]
+keywords = ["mcp", "rekordbox", "pioneer", "dj", "playlists", "claude", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
+dependencies = [
+    "mcp>=2.0,<3",
+    "pyrekordbox>=0.5,<0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/DonFungible/dj-mcp/tree/main/packages/rekordbox-mcp"
+Repository = "https://github.com/DonFungible/dj-mcp"
+Issues = "https://github.com/DonFungible/dj-mcp/issues"
+
+[project.scripts]
+rekordbox-mcp = "rekordbox_mcp.server:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rekordbox_mcp"]

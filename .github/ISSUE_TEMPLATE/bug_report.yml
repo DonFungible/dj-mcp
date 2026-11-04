@@ -1,0 +1,36 @@
+name: Bug report
+description: Something doesn't work as described
+labels: [bug]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options: [rekordbox-mcp, serato-mcp, spotify-dj-mcp, midi-mapper-flx4, other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: The prompt you gave, the tool that was called, or the command you ran.
+  - type: input
+    id: setup
+    attributes:
+      label: Setup
+      description: OS, MCP client, and versions of rekordbox / Serato, your controller model, Python (`uv run python -V`)
+      placeholder: macOS 15.4, Claude Desktop, rekordbox 7.2.14, DDJ-FLX4, Python 3.12
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output
+      description: Please remove anything private (file paths, track names) you don't want to share.
+      render: text

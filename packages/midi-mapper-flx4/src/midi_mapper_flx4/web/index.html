@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>midi-mapper-flx4</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --line: #e3e3df; --text: #1c1c1a; --muted: #6b6b66;
+    --accent: #d9480f; --accent-soft: #fff0e6; --ok: #2b8a3e; --warn: #b35c00; --warn-soft: #fff4e0;
+    --danger: #c92a2a; --code-bg: #f1f1ee; --hit: #ffe8d6;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121211; --panel: #1b1b1a; --line: #2c2c2a; --text: #ececea; --muted: #9a9a94;
+      --accent: #ff7a3d; --accent-soft: #33211a; --ok: #51cf66; --warn: #ffb347; --warn-soft: #2e2416;
+      --danger: #ff6b6b; --code-bg: #252523; --hit: #3d2618;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono, code, kbd { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  button, input, textarea { font: inherit; color: inherit; }
+
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .brand { font-weight: 650; letter-spacing: -0.01em; margin-right: 4px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); font-size: 12.5px; white-space: nowrap;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.accent { color: var(--accent); }
+  .spacer { flex: 1; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .switch input { appearance: none; width: 34px; height: 20px; border-radius: 999px; background: var(--line);
+    position: relative; cursor: pointer; transition: background .15s; margin: 0; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .switch input:checked { background: var(--ok); }
+  .switch input:checked::after { transform: translateX(14px); }
+  .switch input:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  .banner { margin: 16px 20px 0; padding: 10px 14px; border-radius: 8px; background: var(--warn-soft);
+    color: var(--text); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); }
+  .banner strong { color: var(--warn); }
+
+  main { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; padding: 16px 20px 32px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+  .panel-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: 13px; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12.5px; }
+
+  button { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 550; }
+  button.primary:hover { filter: brightness(1.06); }
+  button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 4px 8px; }
+  button.ghost:hover { color: var(--text); background: var(--code-bg); }
+  button.ghost.danger:hover { color: var(--danger); }
+  button.link { border: 0; background: none; color: var(--accent); padding: 0; }
+
+  #mappings { list-style: none; margin: 0; padding: 0; }
+  #mappings li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) auto; gap: 12px;
+    align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); transition: background .4s; }
+  #mappings li:last-child { border-bottom: 0; }
+  #mappings li.hit { background: var(--hit); transition: none; }
+  @media (max-width: 560px) { #mappings li { grid-template-columns: 1fr auto; } .m-action { grid-column: 1 / -1; grid-row: 2; } }
+  .m-name { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-ctrl { color: var(--muted); display: block; }
+  .m-action { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+  .m-action code { background: var(--code-bg); padding: 2px 6px; border-radius: 5px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .tag { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); flex: none; width: 42px; }
+  .m-buttons { display: flex; gap: 2px; }
+  .empty { padding: 28px 14px; text-align: center; color: var(--muted); }
+  .foot { padding: 10px 14px; border-top: 1px solid var(--line); }
+
+  #activity { list-style: none; margin: 0; padding: 0; max-height: 60vh; overflow-y: auto; }
+  #activity li { display: flex; gap: 10px; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--line); }
+  #activity li:last-child { border-bottom: 0; }
+  #activity .t { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+  #activity .c { flex: none; }
+  #activity .r { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #activity .fired { color: var(--accent); }
+  .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 0; width: min(520px, calc(100vw - 32px));
+    background: var(--panel); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .dlg { padding: 18px 20px 16px; display: grid; gap: 14px; }
+  .dlg h2 { margin: 0; font-size: 16px; }
+  .capture { border: 1.5px dashed var(--line); border-radius: 10px; padding: 16px; text-align: center; }
+  .capture.waiting { border-color: var(--accent); color: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+  .capture.got { border-style: solid; }
+  .capture .big { font-size: 15px; font-weight: 600; color: var(--text); }
+  @keyframes pulse { 50% { background: var(--accent-soft); } }
+  @media (prefers-reduced-motion: reduce) { .capture.waiting { animation: none; } }
+  label.field { display: grid; gap: 5px; font-weight: 550; font-size: 13px; }
+  input[type=text], input[type=number], textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--line);
+    border-radius: 7px; background: var(--bg); font-weight: 400; }
+  textarea { min-height: 70px; resize: vertical; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; margin: 0; flex-wrap: wrap; }
+  .seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .seg label { flex: 1; text-align: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; min-width: 64px; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label:has(input:checked) { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .seg label:has(input:disabled) { opacity: .35; cursor: not-allowed; }
+  .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+  .combo-field { display: flex; gap: 6px; }
+  .combo-field input { flex: 1; }
+  button.recording { border-color: var(--accent); color: var(--accent); }
+  .hint { margin: 0; color: var(--muted); font-size: 12.5px; font-weight: 400; }
+  .error { margin: 0; color: var(--danger); }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">midi-mapper-flx4</span>
+  <span class="pill" id="device-pill"><span class="dot"></span><span id="device-text">DDJ-FLX4</span></span>
+  <span class="pill" id="state-pill"><span class="dot"></span><span id="state-text">…</span></span>
+  <span class="spacer"></span>
+  <label class="switch" title="Turn all mappings on or off"><input type="checkbox" id="enabled"> Mappings on</label>
+</header>
+
+<div class="banner" id="no-token" hidden>
+  <span><strong>Missing session link.</strong> Open the link that <code>midi-mapper-flx4 gui</code> printed in the terminal.</span>
+</div>
+<div class="banner" id="offline" hidden>
+  <span><strong>Lost connection to midi-mapper-flx4.</strong> Is <code>midi-mapper-flx4 gui</code> still running? Retrying…</span>
+</div>
+<div class="banner" id="access-banner" hidden>
+  <span><strong>macOS is blocking keystrokes and scrolling.</strong> Give your terminal app Accessibility access, then restart midi-mapper-flx4. Opening apps and shell commands still work.</span>
+  <button id="open-access">Open Accessibility settings</button>
+</div>
+<div class="banner" id="dry-banner" hidden><span><strong>Dry run:</strong> actions are logged in the terminal, not performed.</span></div>
+
+<main>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Mappings</h2><span class="spacer"></span>
+      <button class="primary" id="add">Add mapping</button>
+    </div>
+    <ul id="mappings"></ul>
+    <div class="empty" id="empty" hidden>No mappings yet. Choose <b>Add mapping</b>, then press a control on your controller.</div>
+    <div class="foot muted small">Saved to <span class="mono" id="config-path"></span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Live activity</h2><span class="spacer"></span><span class="muted small">Press anything on the controller</span></div>
+    <ol id="activity"></ol>
+    <div class="empty" id="activity-empty">Nothing yet.</div>
+  </section>
+</main>
+
+<dialog id="editor">
+  <form class="dlg" id="editor-form" novalidate>
+    <h2 id="editor-title">Add mapping</h2>
+
+    <div class="capture waiting" id="capture" aria-live="polite">
+      <div class="big" id="capture-big">Press a control on your controller…</div>
+      <div class="small" id="capture-sub">A button, pad, jog wheel or knob.</div>
+    </div>
+    <button type="button" class="link small" id="recapture" hidden>Use a different control</button>
+
+    <label class="field">Name <input type="text" id="f-name" placeholder="e.g. Approve, Run tests" maxlength="80"></label>
+
+    <fieldset class="seg" id="f-type">
+      <legend>Action</legend>
+      <label><input type="radio" name="type" value="keys" checked>Keys</label>
+      <label><input type="radio" name="type" value="app">App</label>
+      <label><input type="radio" name="type" value="text">Text</label>
+      <label><input type="radio" name="type" value="shell">Command</label>
+      <label><input type="radio" name="type" value="scroll">Scroll</label>
+      <label><input type="radio" name="type" value="turn">Turn</label>
+    </fieldset>
+
+    <div data-type="keys" class="field-group">
+      <label class="field">Key combo
+        <span class="combo-field"><input type="text" class="mono" id="f-keys" placeholder="cmd+shift+p" autocomplete="off" spellcheck="false">
+        <button type="button" class="record" data-for="f-keys">Record</button></span>
+      </label>
+      <p class="hint">Record and press the combo, or type it: cmd, ctrl, alt, shift + a key (enter, esc, tab, up, f5…). Browser shortcuts like ⌘W can't be recorded; type them instead.</p>
+    </div>
+    <div data-type="app" class="field-group" hidden>
+      <label class="field">Application <input type="text" id="f-app" placeholder="Discord" autocomplete="off" spellcheck="false"></label>
+      <p class="hint">Opens the app, or brings it to the front if it's already open.</p>
+    </div>
+    <div data-type="text" class="field-group" hidden>
+      <label class="field">Text to type <textarea id="f-text" class="mono" placeholder="/clear" spellcheck="false"></textarea></label>
+      <p class="hint">Each line break presses Enter. End with a line break to submit.</p>
+    </div>
+    <div data-type="shell" class="field-group" hidden>
+      <label class="field">Shell command <input type="text" class="mono" id="f-shell" placeholder="cd ~/code/app && uv run pytest" autocomplete="off" spellcheck="false"></label>
+      <p class="hint">Runs in the background. Output goes to <span class="mono">~/.config/midi-mapper-flx4/shell.log</span>.</p>
+    </div>
+    <div data-type="scroll" class="field-group" hidden>
+      <label class="field">Lines per step <input type="number" id="f-scroll" value="3" min="-50" max="50" step="1"></label>
+      <p class="hint">For jog wheels and knobs. Use a negative number to reverse the direction.</p>
+    </div>
+    <div data-type="turn" class="field-group" hidden>
+      <label class="field">Clockwise
+        <span class="combo-field"><input type="text" class="mono" id="f-cw" placeholder="down" autocomplete="off" spellcheck="false">
+        <button type="button" class="record" data-for="f-cw">Record</button></span>
+      </label>
+      <label class="field">Counter-clockwise
+        <span class="combo-field"><input type="text" class="mono" id="f-ccw" placeholder="up" autocomplete="off" spellcheck="false">
+        <button type="button" class="record" data-for="f-ccw">Record</button></span>
+      </label>
+      <p class="hint">One key press per step of a jog wheel or knob.</p>
+    </div>
+
+    <p class="error" id="editor-error" role="alert" hidden></p>
+    <div class="actions">
+      <button type="button" id="cancel">Cancel</button>
+      <button type="submit" class="primary" id="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const token = new URLSearchParams(location.hash.slice(1)).get("token");
+let state = null;
+let editing = null;   // { original: control|null, control: control|null }
+let learnTimer = null;
+let recording = null; // { input, button }
+
+const key = (c) => `${c.kind}:${c.channel}:${c.number}`;
+const rawLabel = (c) => `ch ${c.channel} · ${c.kind === "note" ? "note" : "CC"} ${c.number}`;
+const names = {};     // control key -> FLX4 name, from the server
+const remember = (c, name) => { if (name) names[key(c)] = name; };
+const ctrlLabel = (c) => names[key(c)] || rawLabel(c);
+const SYM = { cmd: "⌘", ctrl: "⌃", alt: "⌥", shift: "⇧" };
+const prettyCombo = (s) => s.split("+").map((p) => SYM[p.trim().toLowerCase()] || p.trim()).join(" ");
+
+function el(tag, props = {}, ...kids) {
+  const n = document.createElement(tag);
+  Object.assign(n, props);
+  for (const k of kids) n.append(k);
+  return n;
+}
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Token": token },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  render(data);
+  return data;
+}
+
+// ------------------------------------------------------------------ rendering
+function describe(a) {
+  switch (a.type) {
+    case "keys": return ["keys", prettyCombo(a.value)];
+    case "text": return ["text", a.value.replace(/\n/g, " ↵ ").trim() || "(empty)"];
+    case "shell": return ["cmd", a.value];
+    case "app": return ["app", a.value];
+    case "scroll": return ["scroll", `${a.value} line${Math.abs(a.value) === 1 ? "" : "s"} per step`];
+    case "turn": return ["turn", `↻ ${prettyCombo(a.cw)}   ↺ ${prettyCombo(a.ccw)}`];
+  }
+  return ["", ""];
+}
+
+function render(s) {
+  state = s;
+  for (const m of s.mappings) remember(m.control, m.control_name);
+  $("#device-pill").className = "pill " + (s.connected ? "ok" : "warn");
+  $("#device-text").textContent = s.connected ? s.device : `${s.device} not connected`;
+
+  const st = $("#state-pill");
+  let cls = "ok", text = "Active";
+  if (s.paused_by) { cls = "warn"; text = `Paused while ${s.paused_by} is open`; }
+  else if (!s.enabled) { cls = ""; text = "Off"; }
+  else if (s.learning) { cls = "accent"; text = "Learning"; }
+  st.className = "pill " + cls;
+  $("#state-text").textContent = text;
+  $("#enabled").checked = s.enabled;
+
+  $("#access-banner").hidden = s.accessibility !== false;
+  $("#dry-banner").hidden = !s.dry_run;
+  $("#config-path").textContent = s.config_path;
+
+  const list = $("#mappings");
+  list.replaceChildren();
+  for (const m of s.mappings) {
+    const [tag, text] = describe(m.action);
+    const edit = el("button", { className: "ghost", textContent: "Edit", type: "button" });
+    const del = el("button", { className: "ghost danger", textContent: "Delete", type: "button" });
+    edit.addEventListener("click", () => openEditor(m));
+    del.addEventListener("click", () => removeMapping(m));
+    edit.setAttribute("aria-label", `Edit ${m.label}`);
+    del.setAttribute("aria-label", `Delete ${m.label}`);
+    const li = el("li", {},
+      el("div", {}, el("div", { className: "m-name", textContent: m.name || ctrlLabel(m.control) }),
+                    el("span", { className: "m-ctrl mono", textContent: m.name ? ctrlLabel(m.control) : rawLabel(m.control) })),
+      el("div", { className: "m-action" }, el("span", { className: "tag", textContent: tag }),
+                    el("code", { textContent: text, title: text })),
+      el("div", { className: "m-buttons" }, edit, del));
+    li.dataset.key = key(m.control);
+    list.append(li);
+  }
+  $("#empty").hidden = s.mappings.length > 0;
+}
+
+// ------------------------------------------------------------------ activity
+const MAX_ACTIVITY = 60;
+function onMidi(ev) {
+  const k = key(ev.control);
+  const row = document.querySelector(`#mappings li[data-key="${k}"]`);
+  if (row && ev.fired) {
+    row.classList.add("hit");
+    clearTimeout(row._t);
+    row._t = setTimeout(() => row.classList.remove("hit"), 180);
+  }
+  const feed = $("#activity");
+  const first = feed.firstElementChild;
+  const time = new Date().toLocaleTimeString([], { hour12: false });
+  if (first && first.dataset.key === k && ev.control.kind === "cc") {
+    first.querySelector(".t").textContent = time;
+    first.querySelector(".v").textContent = `value ${ev.value}`;
+    const n = ++first._n;
+    first.querySelector(".count").textContent = `×${n}`;
+    return;
+  }
+  let result;
+  if (ev.mapped) {
+    result = el("span", { className: "r" + (ev.fired ? " fired" : ""), textContent: (ev.fired ? "→ " : "") + ev.mapped });
+    if (!ev.fired) result.textContent += state && state.paused_by ? " (paused)" : state && !state.enabled ? " (off)" : "";
+  } else {
+    const map = el("button", { className: "link small", type: "button", textContent: "Map it" });
+    map.addEventListener("click", () => openEditor(null, ev.control));
+    result = el("span", { className: "r muted" }, "not mapped · ", map);
+  }
+  const li = el("li", {},
+    el("span", { className: "t mono", textContent: time }),
+    el("span", { className: "c mono", textContent: ctrlLabel(ev.control) }),
+    el("span", { className: "v mono muted", textContent: ev.control.kind === "cc" ? `value ${ev.value}` : "" }),
+    el("span", { className: "count mono" }),
+    result);
+  li.dataset.key = k;
+  li._n = 1;
+  feed.prepend(li);
+  while (feed.children.length > MAX_ACTIVITY) feed.lastElementChild.remove();
+  $("#activity-empty").hidden = true;
+}
+
+// ------------------------------------------------------------------ editor
+function setType(type) {
+  for (const r of document.querySelectorAll("#f-type input")) r.checked = r.value === type;
+  for (const g of document.querySelectorAll(".field-group")) g.hidden = g.dataset.type !== type;
+}
+document.querySelectorAll("#f-type input").forEach((r) => r.addEventListener("change", () => setType(r.value)));
+
+function setCaptured(c) {
+  editing.control = c;
+  const box = $("#capture");
+  if (!c) {
+    box.className = "capture waiting";
+    $("#capture-big").textContent = "Press a control on your controller…";
+    $("#capture-sub").textContent = "A button, pad, jog wheel or knob.";
+    $("#recapture").hidden = true;
+    return;
+  }
+  box.className = "capture got";
+  $("#capture-big").textContent = ctrlLabel(c);
+  const existing = state.mappings.find((m) => key(m.control) === key(c));
+  const isSelf = editing.original && key(editing.original) === key(c);
+  let sub = `${rawLabel(c)}. ` + (c.kind === "cc" ? "A jog wheel, knob or fader." : "A button or pad.");
+  if (existing && !isSelf) sub += ` Currently mapped as “${existing.label}”; saving replaces it.`;
+  $("#capture-sub").textContent = sub;
+  $("#recapture").hidden = false;
+  const isCC = c.kind === "cc";
+  for (const r of document.querySelectorAll("#f-type input")) {
+    if (r.value === "scroll" || r.value === "turn") r.disabled = !isCC;
+  }
+  const current = document.querySelector("#f-type input:checked").value;
+  if (!isCC && (current === "scroll" || current === "turn")) setType("keys");
+  if (isCC && !editing.original && !existing) setType("scroll");
+}
+
+async function startLearning() {
+  setCaptured(null);
+  await api("/api/learn", { active: true }).catch(showError);
+  clearInterval(learnTimer);
+  learnTimer = setInterval(() => api("/api/learn", { active: true }).catch(() => {}), 30000);
+}
+async function stopLearning() {
+  clearInterval(learnTimer);
+  learnTimer = null;
+  if (state && state.learning) await api("/api/learn", { active: false }).catch(() => {});
+}
+
+function openEditor(m, control) {
+  editing = { original: m ? m.control : null, control: null };
+  $("#editor-title").textContent = m ? "Edit mapping" : "Add mapping";
+  $("#editor-error").hidden = true;
+  for (const r of document.querySelectorAll("#f-type input")) r.disabled = false;
+  $("#f-name").value = m ? m.name : "";
+  $("#f-keys").value = $("#f-text").value = $("#f-shell").value = $("#f-app").value = $("#f-cw").value = $("#f-ccw").value = "";
+  $("#f-scroll").value = 3;
+  setType("keys");
+  if (m) {
+    const a = m.action;
+    setType(a.type);
+    if (a.type === "turn") { $("#f-cw").value = a.cw; $("#f-ccw").value = a.ccw; }
+    else $(`#f-${a.type}`).value = a.value;
+    setCaptured(m.control);
+  } else if (control) {
+    setCaptured(control);
+  } else {
+    startLearning();
+  }
+  $("#editor").showModal();
+  if (m || control) $("#f-name").focus();
+}
+
+function closeEditor() {
+  stopRecording();
+  stopLearning();
+  editing = null;
+  if ($("#editor").open) $("#editor").close();
+}
+
+function showError(e) {
+  const p = $("#editor-error");
+  p.textContent = e.message || String(e);
+  p.hidden = false;
+}
+
+$("#recapture").addEventListener("click", startLearning);
+$("#cancel").addEventListener("click", closeEditor);
+$("#editor").addEventListener("close", () => { if (editing) closeEditor(); });
+$("#editor").addEventListener("cancel", (e) => { if (recording) e.preventDefault(); });
+
+$("#editor-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!editing.control) return showError(new Error("Press a control on the controller first."));
+  const type = document.querySelector("#f-type input:checked").value;
+  let action;
+  if (type === "turn") action = { type, cw: $("#f-cw").value.trim(), ccw: $("#f-ccw").value.trim() };
+  else if (type === "scroll") action = { type, value: Number($("#f-scroll").value) };
+  else if (type === "text") action = { type, value: $("#f-text").value };
+  else action = { type, value: $(`#f-${type}`).value.trim() };
+  const body = { control: editing.control, name: $("#f-name").value.trim(), action };
+  if (editing.original && key(editing.original) !== key(editing.control)) body.replace = editing.original;
+  try {
+    await api("/api/mappings", body);
+    closeEditor();
+  } catch (err) {
+    showError(err);
+  }
+});
+
+async function removeMapping(m) {
+  if (!confirm(`Delete “${m.label}”?`)) return;
+  await api("/api/mappings/delete", { control: m.control }).catch((e) => alert(e.message));
+}
+
+// ------------------------------------------------------------------ key recording
+const CODES = {
+  Enter: "enter", NumpadEnter: "enter", Escape: "esc", Tab: "tab", Space: "space", Backspace: "backspace",
+  Delete: "delete", ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Home: "home",
+  End: "end", PageUp: "pageup", PageDown: "pagedown", Minus: "-", Equal: "=", BracketLeft: "[",
+  BracketRight: "]", Backslash: "\\", Semicolon: ";", Quote: "'", Comma: ",", Period: ".", Slash: "/", Backquote: "`",
+};
+function comboFromEvent(e) {
+  const c = e.code;
+  let k = /^Key[A-Z]$/.test(c) ? c.slice(3).toLowerCase()
+        : /^Digit\d$/.test(c) ? c.slice(5)
+        : /^F\d{1,2}$/.test(c) ? c.toLowerCase()
+        : CODES[c];
+  if (!k) return null;
+  const mods = [];
+  if (e.metaKey) mods.push("cmd");
+  if (e.ctrlKey) mods.push("ctrl");
+  if (e.altKey) mods.push("alt");
+  if (e.shiftKey) mods.push("shift");
+  return [...mods, k].join("+");
+}
+function stopRecording() {
+  if (!recording) return;
+  recording.button.textContent = "Record";
+  recording.button.classList.remove("recording");
+  recording = null;
+}
+document.querySelectorAll("button.record").forEach((b) => b.addEventListener("click", () => {
+  if (recording && recording.button === b) return stopRecording();
+  stopRecording();
+  recording = { input: document.getElementById(b.dataset.for), button: b };
+  b.textContent = "Press keys…";
+  b.classList.add("recording");
+}));
+window.addEventListener("keydown", (e) => {
+  if (!recording) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const combo = comboFromEvent(e);
+  if (!combo) return; // modifier on its own: keep waiting
+  recording.input.value = combo;
+  stopRecording();
+}, true);
+
+// ------------------------------------------------------------------ wiring
+$("#enabled").addEventListener("change", (e) => api("/api/enabled", { enabled: e.target.checked }).catch(() => {}));
+$("#add").addEventListener("click", () => openEditor(null));
+$("#open-access").addEventListener("click", () => api("/api/open-accessibility").catch(() => {}));
+
+if (!token) {
+  $("#no-token").hidden = false;
+} else {
+  const es = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
+  es.onopen = () => { $("#offline").hidden = true; };
+  es.onerror = () => { $("#offline").hidden = false; };
+  es.onmessage = (m) => {
+    const ev = JSON.parse(m.data);
+    if (ev.control) remember(ev.control, ev.control_name);
+    if (ev.type === "state") render(ev);
+    else if (ev.type === "midi") onMidi(ev);
+    else if (ev.type === "learn") {
+      onMidi(ev);
+      if (editing && !editing.control) {
+        setCaptured(ev.control);
+        stopLearning();
+        $("#f-name").focus();
+      }
+    } else if (ev.type === "error") console.warn(ev.message);
+  };
+}
+</script>
+</body>
+</html>

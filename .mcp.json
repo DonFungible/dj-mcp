@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "rekordbox": {
+      "command": "uv",
+      "args": [
+        "run",
+        "rekordbox-mcp"
+      ],
+      "env": {
+        "REKORDBOX_MCP_ALLOW_WRITE": "0"
+      }
+    },
+    "spotify": {
+      "command": "uv",
+      "args": [
+        "run",
+        "spotify-dj-mcp"
+      ]
+    },
+    "serato": {
+      "command": "node",
+      "args": [
+        "packages/serato-mcp/dist/index.js"
+      ],
+      "env": {
+        "SERATO_MCP_READONLY": "1"
+      }
+    },
+    "flx4": {
+      "command": "uv",
+      "args": [
+        "run",
+        "midi-mapper-flx4"
+      ]
+    }
+  }
+}

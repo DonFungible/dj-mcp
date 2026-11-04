@@ -1,0 +1,15 @@
+name: Feature or new DJ app
+description: Suggest a tool, or support for another DJ app or controller
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to do?
+      description: Describe what you'd ask the AI, or what the controller should do, rather than how to build it.
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: DJ software / controller involved
