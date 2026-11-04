@@ -38,6 +38,7 @@ Each package is released separately; entries are grouped by package.
 - A background mapper that keeps running after the assistant closes, with one mapper at a time.
 - `midi-mapper-flx4 map`: an interactive drawing of the FLX4 in the terminal that lights up the control you
   press and lets you map it on the spot. The MCP tools return the same drawing.
+- Record a key combo by pressing it (`map`, and the `record_keys` MCP tool) instead of typing `cmd+shift+]`.
 - Browser-based editor with live activity, learn-by-pressing and key-combo recording.
 - Pauses while rekordbox or Serato is running, reconnects when the controller is replugged, and reloads the
   config live.

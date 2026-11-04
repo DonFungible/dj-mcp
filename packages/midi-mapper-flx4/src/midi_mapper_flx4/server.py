@@ -29,7 +29,8 @@ mcp = MCPServer(
     instructions=(
         "Maps buttons, pads and jog wheels on the user's Pioneer DDJ-FLX4 DJ controller to computer actions. "
         "To map a button: first tell the user to press the button on their FLX4 (the call waits for it), then "
-        "call wait_for_button, then map_button with the returned control id. wait_for_button and status return "
+        "call wait_for_button, then map_button with the returned control id. If the user would rather show a "
+        "shortcut than spell it out, ask them to press it and call record_keys. wait_for_button and status return "
         "an ASCII drawing of the controller: show it to the user in a code block, so they can see which control "
         "was pressed (»Play«) and which are mapped ((Play)). Turn the request into the "
         "simplest action: 'open Discord' -> app 'Discord'; a shortcut -> keys like 'cmd+shift+m'; typing -> "
@@ -151,6 +152,25 @@ def wait_for_button(timeout_seconds: int = 60) -> dict[str, Any]:
         "current_mapping": _describe(current) if current else None,
         "diagram": render({control_id(c) for c in mappings}, pressed=ctrl),
     }
+
+
+@tool(READ)
+def record_keys(timeout_seconds: int = 30) -> dict[str, Any]:
+    """Wait for the user to press a key combo on their computer keyboard, and return it (e.g. "cmd+shift+]").
+
+    Use it when the user wants to show a shortcut rather than spell it out: tell them to press it BEFORE
+    calling this. Keys are swallowed while recording, so the combo doesn't also act on the screen. Pass the
+    result to map_button as a keys value (or as value/counter_clockwise for a jog wheel turn).
+    """
+    from .keycapture import RecordError, record_combo
+
+    try:
+        pressed = record_combo(max(5, min(int(timeout_seconds), 120)))
+    except RecordError as e:
+        raise ToolError(str(e)) from e
+    if pressed is None:
+        raise ToolError("Cancelled with Esc.")
+    return {"combo": pressed}
 
 
 @tool(WRITE)

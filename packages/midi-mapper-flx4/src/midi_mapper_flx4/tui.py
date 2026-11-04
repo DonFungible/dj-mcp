@@ -65,6 +65,13 @@ class Keys:
         ready, _, _ = select.select([sys.stdin], [], [], timeout)
         return os.read(self._fd, 1).decode(errors="ignore") if ready else None
 
+    def flush(self) -> None:
+        """Drop keystrokes that reached the terminal while recording a combo."""
+        if self._fd is not None:
+            import termios
+
+            termios.tcflush(self._fd, termios.TCIFLUSH)
+
     @contextlib.contextmanager
     def lines(self) -> Iterator[None]:
         """Normal, echoed line input for the duration of a prompt."""
@@ -166,7 +173,6 @@ class MapperUI:
         jog = is_jog(c)
         prompts = {
             "a": ("Application to open (e.g. Discord): ", "app"),
-            "k": ("Key combo (e.g. cmd+shift+p): ", "keys"),
             "t": ("Text to type (\\n presses Enter): ", "text"),
             "c": ("Shell command: ", "shell"),
             "s": ("Lines to scroll per step (negative reverses): ", "scroll"),
@@ -183,9 +189,18 @@ class MapperUI:
         with keys.lines():
             try:
                 if jog and choice == "k":
-                    cw = input("  Combo per clockwise step (e.g. down): ").strip()
-                    ccw = input("  Combo per counter-clockwise step (e.g. up): ").strip()
+                    cw = self.combo(keys, "clockwise step (e.g. cmd+shift+] for the next tab)")
+                    ccw = self.combo(keys, "counter-clockwise step (e.g. cmd+shift+[)")
+                    if not cw or not ccw:
+                        self.message = "Nothing entered; not saved."
+                        return
                     spec = {"type": "turn", "cw": cw, "ccw": ccw}
+                elif choice == "k":
+                    value = self.combo(keys, "key combo (e.g. cmd+shift+p)")
+                    if not value:
+                        self.message = "Nothing entered; not saved."
+                        return
+                    spec = {"type": "keys", "value": value}
                 else:
                     question, kind = prompts[choice]
                     value = input("  " + question)
@@ -205,6 +220,22 @@ class MapperUI:
             self.save(spec, name)
         except ConfigError as e:
             self.message = f"Not saved: {e}"
+
+    def combo(self, keys: Keys, what: str) -> str:
+        """Record a combo by pressing it; Esc, or no keyboard access, falls back to typing it."""
+        from .keycapture import RecordError, record_combo
+
+        print(f"\n  Press the {what} now. Esc to type it instead.", flush=True)
+        try:
+            pressed = record_combo()
+        except RecordError as e:
+            print(f"  {e}")
+            pressed = None
+        keys.flush()
+        if pressed:
+            print(f"  Recorded: {pressed}")
+            return pressed
+        return input(f"  Type the {what}: ").strip()
 
     def try_it(self) -> None:
         import mido

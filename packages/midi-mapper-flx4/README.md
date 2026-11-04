@@ -56,6 +56,7 @@ your first button. It keeps running after you close the assistant. Stop it with
 **macOS:** opening apps and running commands work straight away. Key combos, typing and scrolling need
 Accessibility permission for the app that started the mapper (usually your terminal): System Settings →
 Privacy & Security → Accessibility. Then restart the mapper. The assistant tells you when it's missing.
+Recording a shortcut by pressing it also needs Input Monitoring in the same place.
 
 ## Actions
 
@@ -77,6 +78,7 @@ release.
 | --- | --- |
 | `wait_for_button` | Waits for you to press a button, pad or jog wheel, and returns its name and current mapping. Presses are ignored by the mapper meanwhile |
 | `map_button` | Saves an action for a control (replacing any existing one) and starts the mapper if needed |
+| `record_keys` | Waits for you to press a shortcut on your keyboard and returns it, so you don't have to spell out `cmd+shift+]` |
 | `test_mapping` | Runs a button's action once, as if pressed |
 | `unmap_button` | Removes a mapping |
 | `status` | FLX4 connected? Mapper running? Accessibility allowed? Plus every mapping |
@@ -91,7 +93,8 @@ uvx --python 3.12 midi-mapper-flx4 map
 This draws the FLX4 in your terminal. Press any button, pad, knob or jog wheel and it lights up, with its name
 and what it does now. Then press a letter to choose an action (`a` open an app, `k` key combo, `t` type text,
 `c` shell command; `s` scroll for jog wheels), `x` to remove a mapping, `r` to try it, or just press another
-control. Mapped controls are shown in green and in parentheses, the selected one is highlighted:
+control. For key combos, just press the shortcut on your keyboard (Esc to type it instead). Keys are held
+back while recording, so pressing Cmd+Shift+] doesn't also switch your terminal tab. Mapped controls are shown in green and in parentheses, the selected one is highlighted:
 
 ```
 ╭─ Deck 1 ─────────────────────────┬─ Mixer ────────────────┬─ Deck 2 ─────────────────────────╮
