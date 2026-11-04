@@ -19,7 +19,7 @@ from mcp.types import ToolAnnotations
 
 from . import service
 from .config import DEFAULT_CONFIG, Config, ConfigError, Control, load_config, mapping_from_json, mapping_to_json
-from .engine import Executor, Mapper, accessibility_trusted
+from .engine import Executor, Mapper, accessibility_trusted, input_names
 from .flx4 import DEVICE, control_id, control_name, is_jog, parse_control_id
 from .runtime import Runtime
 
@@ -68,9 +68,7 @@ def _config() -> Config:
 
 
 def _port() -> str:
-    import mido
-
-    names = mido.get_input_names()
+    names = input_names()
     device = _config().device
     port = next((n for n in names if device.lower() in n.lower()), None)
     if port is None:
@@ -97,14 +95,12 @@ def _ensure_mapper() -> dict[str, Any]:
 @tool(READ)
 def status() -> dict[str, Any]:
     """Whether the FLX4 is connected, the mapper is running, and keystrokes are allowed; plus all mappings."""
-    import mido
-
     cfg = _config()
     pid = service.running_pid(config_path)
     trusted = accessibility_trusted()
     return {
         "controller": DEVICE,
-        "connected": any(cfg.device.lower() in n.lower() for n in mido.get_input_names()),
+        "connected": any(cfg.device.lower() in n.lower() for n in input_names()),
         "mapper_running": pid is not None,
         "mapper_pid": pid,
         "accessibility": trusted,

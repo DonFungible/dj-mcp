@@ -58,9 +58,8 @@ def parse_action(answer: str) -> dict[str, str | int]:
 
 
 def cmd_devices(_args) -> None:
-    import mido
 
-    print("MIDI inputs:", *(mido.get_input_names() or ["(none)"]), sep="\n  ")
+    print("MIDI inputs:", *(_input_names() or ["(none)"]), sep="\n  ")
 
 
 def cmd_learn(args) -> None:
@@ -153,7 +152,7 @@ def cmd_run(args) -> None:
     _warn_accessibility(args.dry_run)
     runtime = Runtime(args.config, dry_run=args.dry_run)
     if not any(runtime.config.device.lower() in n.lower() for n in _input_names()):
-        log(f"waiting for the {runtime.config.device} to be connected…")
+        log(f"waiting for the {runtime.config.device} to be connected...")
     runtime.start()
     if threading.current_thread() is threading.main_thread():
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # so `stop` runs the cleanup below
@@ -198,9 +197,9 @@ def cmd_serve(args) -> None:
 
 
 def _input_names() -> list[str]:
-    import mido
+    from .engine import input_names
 
-    return mido.get_input_names()
+    return input_names()
 
 
 def main(argv: list[str] | None = None) -> None:

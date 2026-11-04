@@ -201,10 +201,18 @@ def accessibility_trusted() -> bool | None:
         return None
 
 
-def find_port(device: str) -> str:
+def input_names() -> list[str]:
+    """Connected MIDI inputs; empty if the system has no MIDI support (e.g. Linux without ALSA)."""
     import mido
 
-    names = mido.get_input_names()
+    try:
+        return mido.get_input_names()
+    except Exception:  # noqa: BLE001 - rtmidi raises its own error types when no MIDI backend is available
+        return []
+
+
+def find_port(device: str) -> str:
+    names = input_names()
     for n in names:
         if device.lower() in n.lower():
             return n

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import service
 from .config import Config, Control, Mapping, load_config, parse_config, render_config
-from .engine import Executor, Mapper, PauseWatcher, log
+from .engine import Executor, Mapper, PauseWatcher, input_names, log
 from .flx4 import control_id, control_name
 
 POLL_SECONDS = 2.0
@@ -56,7 +56,7 @@ class Runtime:
         while not self._stop.is_set():
             try:
                 self._maybe_reload()
-                names = mido.get_input_names()
+                names = input_names()
                 if names != self.devices:
                     self.devices = names
                     self.emit_state()

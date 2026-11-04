@@ -134,3 +134,15 @@ def test_background_mapper_start_stop(tmp_path):
     finally:
         assert service.stop_background(cfg) == pid
     assert service.running_pid(cfg) is None and not service.pid_file(cfg).exists()
+
+
+def test_no_midi_system(mcp_env, monkeypatch):
+    """Linux without ALSA: report "not connected" instead of crashing."""
+
+    def boom():
+        raise RuntimeError("MidiInAlsa::initialize: error creating ALSA sequencer client object.")
+
+    monkeypatch.setattr(mido, "get_input_names", boom)
+    assert server.status()["connected"] is False
+    with pytest.raises(ToolError, match="isn't connected"):
+        server.wait_for_button()

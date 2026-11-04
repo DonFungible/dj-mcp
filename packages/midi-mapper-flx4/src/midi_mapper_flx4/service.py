@@ -86,8 +86,10 @@ def start_background(config: Path, wait: float = 5.0) -> int:
     out.close()
     deadline = time.monotonic() + wait
     while time.monotonic() < deadline:
-        if running_pid(config) == proc.pid:
-            return proc.pid
+        # Not necessarily proc.pid: on Windows a venv's python.exe re-launches the real interpreter as a child.
+        pid = running_pid(config)
+        if pid:
+            return pid
         if proc.poll() is not None:
             break
         time.sleep(0.1)
