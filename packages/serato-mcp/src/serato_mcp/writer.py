@@ -74,7 +74,9 @@ class WriteTxn:
     def backup(self, file: str) -> None:
         if file in self._backed_up or not os.path.exists(file):
             return
-        dest = os.path.join(self.backup_dir, os.path.relpath(file, "/"))
+        # Mirror the file's absolute path inside the backup folder (with the drive letter as a folder on Windows).
+        absolute = Path(os.path.abspath(file))
+        dest = os.path.join(self.backup_dir, absolute.drive.rstrip(":"), *absolute.parts[1:])
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copyfile(file, dest)
         self._backed_up.add(file)
