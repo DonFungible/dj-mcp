@@ -19,6 +19,7 @@ from mcp.types import ToolAnnotations
 
 from . import service
 from .config import DEFAULT_CONFIG, Config, ConfigError, Control, load_config, mapping_from_json, mapping_to_json
+from .diagram import render
 from .engine import Executor, Mapper, accessibility_trusted, input_names
 from .flx4 import DEVICE, control_id, control_name, is_jog, parse_control_id
 from .runtime import Runtime
@@ -28,7 +29,9 @@ mcp = MCPServer(
     instructions=(
         "Maps buttons, pads and jog wheels on the user's Pioneer DDJ-FLX4 DJ controller to computer actions. "
         "To map a button: first tell the user to press the button on their FLX4 (the call waits for it), then "
-        "call wait_for_button, then map_button with the returned control id. Turn the request into the "
+        "call wait_for_button, then map_button with the returned control id. wait_for_button and status return "
+        "an ASCII drawing of the controller: show it to the user in a code block, so they can see which control "
+        "was pressed (»PLAY«) and which are mapped ((PLAY)). Turn the request into the "
         "simplest action: 'open Discord' -> app 'Discord'; a shortcut -> keys like 'cmd+shift+m'; typing -> "
         "text; anything else -> a shell command. Prefer app and keys over shell. Don't map a shell command the "
         "user didn't ask for, and say what a shell command does before mapping it. Mappings only work while the "
@@ -114,6 +117,7 @@ def status() -> dict[str, Any]:
         "paused_while_running": cfg.pause_when_running,
         "config_path": str(config_path),
         "mappings": [_describe(m) for m in cfg.mappings.values()],
+        "diagram": render({control_id(c) for c in cfg.mappings}),
     }
 
 
@@ -137,13 +141,15 @@ def wait_for_button(timeout_seconds: int = 60) -> dict[str, Any]:
             service.start_background(config_path)
     if ctrl is None:
         raise ToolError(f"No button was pressed within {timeout} seconds.")
-    current = _config().mappings.get(ctrl)
+    mappings = _config().mappings
+    current = mappings.get(ctrl)
     return {
         "id": control_id(ctrl),
         "control_name": control_name(ctrl),
         "kind": "jog wheel" if is_jog(ctrl) else ("knob/fader" if ctrl.kind == "cc" else "button/pad"),
         "suitable_actions": ["scroll", "turn"] if is_jog(ctrl) else ["app", "keys", "text", "shell"],
         "current_mapping": _describe(current) if current else None,
+        "diagram": render({control_id(c) for c in mappings}, pressed=ctrl),
     }
 
 

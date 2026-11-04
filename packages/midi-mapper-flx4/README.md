@@ -82,11 +82,44 @@ release.
 | `status` | FLX4 connected? Mapper running? Accessibility allowed? Plus every mapping |
 | `start_mapper` / `stop_mapper` | Starts or stops the background mapper |
 
-## Without an assistant
+## Map buttons in the terminal
+
+```sh
+uvx --python 3.12 midi-mapper-flx4 map
+```
+
+This draws the FLX4 in your terminal. Press any button, pad, knob or jog wheel and it lights up, with its name
+and what it does now. Then press a letter to choose an action (`a` open an app, `k` key combo, `t` type text,
+`c` shell command; `s` scroll for jog wheels), `x` to remove a mapping, `r` to try it, or just press another
+control. Mapped controls are shown in green and in parentheses:
+
+```
+╭───────────────────────────────────── Pioneer DDJ-FLX4 ─────────────────────────────────────╮
+│                                       [ BEAT FX ON ]                                       │
+│  [LOOP IN] [LOOP OUT]  [ SYNC ]   [LOAD] [BROWSE] [LOAD]   [LOOP IN] [LOOP OUT]  [ SYNC ]  │
+│  DECK 1                                                    DECK 2                          │
+│    ║     .-~~~~~~~~~~~-.          [ TRIM][MASTER][ TRIM]           .-~~~~~~~~~~~-.    ║    │
+│    ║    /               \         [  HI ][PHONES][  HI ]          /               \   ║    │
+│    ║   |    (  JOG  )    |        [ MID ][HP MIX][ MID ]         |    [  JOG  ]    |  ║    │
+│    ║    \               /         [ LOW ]        [ LOW ]          \               /   ║    │
+│    ║     '-~~~~~~~~~~~-'          [ CFX ]        [ CFX ]           '-~~~~~~~~~~~-'    ║    │
+│ [TEMPO]                           [ CUE ]        [ CUE ]                           [TEMPO] │
+│  [HOTCUE][PADFX][JUMP][SAMPLE]       ║              ║      [HOTCUE][PADFX][JUMP][SAMPLE]   │
+│  (  1  )[  2  ][  3  ][  4  ]     [FADER]        [FADER]   [  1  ][  2  ][  3  ][  4  ]    │
+│  [  5  ][  6  ][  7  ][  8  ]               ╪              [  5  ][  6  ][  7  ][  8  ]    │
+│  [ CUE ] ( PLAY )                    [  CROSSFADER  ]      [ CUE ] » PLAY «                │
+╰────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+Here deck 1's Play, deck 1's jog wheel and pad 1 are mapped, and deck 2's Play was just pressed. While `map` is
+open, the background mapper ignores presses, so you can select a control without triggering it. When you quit,
+it offers to start the mapper if it isn't running. Your assistant shows the same drawing in chat when you map a
+button through MCP.
+
+## Other commands
 
 ```sh
 uvx --python 3.12 midi-mapper-flx4 gui      # browser editor; also runs the mappings while it's open
-uvx --python 3.12 midi-mapper-flx4 learn    # map buttons in the terminal
 uvx --python 3.12 midi-mapper-flx4 run      # run the mappings in this terminal (add --dry-run to log only)
 uvx --python 3.12 midi-mapper-flx4 status   # is the mapper running and the FLX4 connected?
 uvx --python 3.12 midi-mapper-flx4 stop     # stop the background mapper
@@ -98,7 +131,7 @@ Only one mapper runs at a time. Stop the background one before running `gui` or 
 
 ## Config file
 
-Mappings live in `~/.config/midi-mapper-flx4/config.toml`. The assistant, the editor and `learn` write it for
+Mappings live in `~/.config/midi-mapper-flx4/config.toml`. The assistant, `map` and the editor write it for
 you, and a running mapper reloads it when it changes. Saving from the assistant or the editor rewrites the
 file, so hand-written comments are dropped.
 

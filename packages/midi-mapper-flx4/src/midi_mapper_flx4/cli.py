@@ -13,48 +13,10 @@ from .config import (
     DEFAULT_CONFIG,
     DEFAULT_DEVICE,
     ConfigError,
-    Control,
     load_config,
-    mapping_block,
-    parse_config,
     starter_config,
 )
-from .engine import accessibility_trusted, find_port, log
-
-ACTION_HELP = """\
-  keys:<combo>       e.g. keys:cmd+shift+p   keys:ctrl+c   keys:enter
-  text:<text>        e.g. text:/clear\\n      (\\n presses Enter)
-  shell:<command>    e.g. shell:cd ~/code/app && uv run pytest
-  app:<name>         e.g. app:Discord   (opens it, or brings it to the front)
-  scroll:<lines>     jog wheel / knob: lines per step, e.g. scroll:3
-  turn:<cw>,<ccw>    jog wheel / knob: combo per step, e.g. turn:down,up
-  (blank to skip)"""
-
-
-def parse_action(answer: str) -> dict[str, str | int]:
-    kind, sep, value = answer.partition(":")
-    kind = kind.strip().lower()
-    if not sep:
-        raise ConfigError("Write it as kind:value, e.g. keys:cmd+c")
-    if kind in ("keys", "k"):
-        return {"keys": value.strip()}
-    if kind in ("text", "t"):
-        return {"text": value.replace("\\n", "\n")}
-    if kind in ("shell", "s"):
-        return {"shell": value.strip()}
-    if kind in ("app", "a"):
-        return {"app": value.strip()}
-    if kind == "scroll":
-        try:
-            return {"scroll": int(value)}
-        except ValueError as e:
-            raise ConfigError("scroll needs a whole number, e.g. scroll:3") from e
-    if kind == "turn":
-        cw, _, ccw = value.partition(",")
-        if not ccw:
-            raise ConfigError("turn needs two combos, e.g. turn:down,up")
-        return {"keys_cw": cw.strip(), "keys_ccw": ccw.strip()}
-    raise ConfigError(f"Unknown action {kind!r}")
+from .engine import accessibility_trusted, log
 
 
 def cmd_devices(_args) -> None:
@@ -62,55 +24,11 @@ def cmd_devices(_args) -> None:
     print("MIDI inputs:", *(_input_names() or ["(none)"]), sep="\n  ")
 
 
-def cmd_learn(args) -> None:
-    import mido
+def cmd_map(args) -> None:
+    from .tui import run
 
-    path: Path = args.config
-    ensure_config(path)
-    cfg = load_config(path)
-    port_name = find_port(cfg.device)
-    print(f"Listening on {port_name}. Press a control on the controller (Ctrl+C to finish).")
-    print("Tip: Shift + a button sends a different message, so it can have its own mapping.\n")
-
-    recent: dict[Control, float] = {}
-    with mido.open_input(port_name) as port:
-        while True:
-            msg = port.receive()
-            ctrl = Control.from_message(msg)
-            if ctrl is None:
-                continue
-            now = time.monotonic()
-            # Jogs/knobs/faders send streams; treat a burst from one control as one event.
-            if now - recent.get(ctrl, 0) < 1.0:
-                recent[ctrl] = now
-                continue
-            recent[ctrl] = now
-
-            raw = f"value={msg.value}" if ctrl.kind == "cc" else ""
-            print(f"\n▶ {ctrl} {raw}".rstrip())
-            cfg = load_config(path)
-            if ctrl in cfg.mappings:
-                print(f"  already mapped as {cfg.mappings[ctrl].label!r}; edit {path} to change it.")
-                continue
-            if ctrl.kind == "cc":
-                print("  (looks like a jog wheel, knob or fader; scroll/turn suit jogs and knobs)")
-            print(ACTION_HELP)
-            answer = input("  action> ").strip()
-            if answer:
-                try:
-                    action = parse_action(answer)
-                    name = input("  name (optional)> ").strip()
-                    block = mapping_block(ctrl, action, name)
-                    parse_config(path.read_text() + block)  # validate before saving
-                except ConfigError as e:
-                    print(f"  ✗ {e}. Not saved; press the control again to retry.")
-                else:
-                    with open(path, "a") as f:
-                        f.write(block)
-                    print(f"  ✓ saved to {path}")
-            for _ in port.iter_pending():  # drop anything pressed while typing
-                pass
-            recent.clear()
+    ensure_config(args.config)
+    run(args.config)
 
 
 def cmd_check(args) -> None:
@@ -213,7 +131,10 @@ def main(argv: list[str] | None = None) -> None:
     sub = ap.add_subparsers(dest="command")
     sub.add_parser("serve", help="run the MCP server over stdio (default)").set_defaults(func=cmd_serve)
     sub.add_parser("devices", help="list connected MIDI inputs").set_defaults(func=cmd_devices)
-    sub.add_parser("learn", help="press buttons and assign actions in the terminal").set_defaults(func=cmd_learn)
+    sub.add_parser("map", help="interactive FLX4 diagram: press a control, choose what it does").set_defaults(
+        func=cmd_map
+    )
+    sub.add_parser("learn", help="same as map").set_defaults(func=cmd_map)
     p = sub.add_parser("run", help="run the mapper in this terminal")
     p.add_argument("--dry-run", action="store_true", help="log actions instead of performing them")
     p.set_defaults(func=cmd_run)
@@ -235,7 +156,7 @@ def main(argv: list[str] | None = None) -> None:
     except RuntimeError as e:
         raise SystemExit(str(e)) from e
     except FileNotFoundError as e:
-        raise SystemExit(f"{e.filename} not found. Run `midi-mapper-flx4 learn` to create it.") from e
+        raise SystemExit(f"{e.filename} not found. Run `midi-mapper-flx4 map` to create it.") from e
 
 
 if __name__ == "__main__":

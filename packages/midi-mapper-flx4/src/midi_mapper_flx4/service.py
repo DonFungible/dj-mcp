@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 from .config import Control
-from .flx4 import is_jog
+from .flx4 import coarse, is_jog
 
 SETTLE_SECONDS = 0.6  # after the first message, how long to keep listening to tell a jog turn from a touch
 
@@ -121,16 +121,12 @@ def pick_control(seen: list[Control]) -> Control:
     """The control the user meant, from everything the controller sent in the settle window.
 
     Turning a jog wheel by its top first sends a touch note, so a jog turn wins over the touch. Faders and
-    knobs send 14-bit values as two CCs (n and n + 32); the second one is dropped.
+    knobs send 14-bit values as two CCs (n and n + 32); both mean the same knob.
     """
     jog = next((c for c in seen if is_jog(c)), None)
     if jog:
         return jog
-    for c in seen:
-        if c.kind == "cc" and c.number >= 32 and Control("cc", c.channel, c.number - 32) in seen:
-            continue
-        return c
-    return seen[0]
+    return coarse(seen[0])  # a knob that only moved a little may send just its fine (n + 32) half
 
 
 def capture(port_name: str, config: Path, timeout: float) -> Control | None:

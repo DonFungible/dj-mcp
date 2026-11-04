@@ -36,6 +36,8 @@ Each package is released separately; entries are grouped by package.
 - Map FLX4 buttons, pads and jog wheels to apps, key combos, text, shell commands, scrolling and per-step keys.
   Controls are shown by name ("Deck 1 Play/Pause", "Deck 2 Hot Cue pad 3").
 - A background mapper that keeps running after the assistant closes, with one mapper at a time.
+- `midi-mapper-flx4 map`: an interactive drawing of the FLX4 in the terminal that lights up the control you
+  press and lets you map it on the spot. The MCP tools return the same drawing.
 - Browser-based editor with live activity, learn-by-pressing and key-combo recording.
 - Pauses while rekordbox or Serato is running, reconnects when the controller is replugged, and reloads the
   config live.

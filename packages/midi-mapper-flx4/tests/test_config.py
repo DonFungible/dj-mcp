@@ -1,6 +1,5 @@
 import pytest
 
-from midi_mapper_flx4.cli import parse_action
 from midi_mapper_flx4.config import ConfigError, Control, mapping_block, parse_combo, parse_config, starter_config
 
 
@@ -55,14 +54,3 @@ def test_duplicate_control_rejected():
     block = mapping_block(Control("note", 1, 5), {"keys": "a"})
     with pytest.raises(ConfigError, match="already mapped"):
         parse_config(block + block)
-
-
-def test_parse_action():
-    assert parse_action("keys: cmd+c") == {"keys": "cmd+c"}
-    assert parse_action("text:/clear\\n") == {"text": "/clear\n"}
-    assert parse_action("shell:echo a:b") == {"shell": "echo a:b"}
-    assert parse_action("scroll:3") == {"scroll": 3}
-    assert parse_action("turn:down, up") == {"keys_cw": "down", "keys_ccw": "up"}
-    for bad in ("keys", "scroll:x", "turn:down", "dance:now"):
-        with pytest.raises(ConfigError):
-            parse_action(bad)

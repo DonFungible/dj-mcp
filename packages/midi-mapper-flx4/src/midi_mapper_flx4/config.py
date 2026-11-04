@@ -183,7 +183,7 @@ def starter_config(device: str = DEFAULT_DEVICE, pause_when_running: list[str] |
     pause = DEFAULT_PAUSE if pause_when_running is None else pause_when_running
     device_line = "" if device == DEFAULT_DEVICE else f"device = {json.dumps(device)}\n"
     return f"""# midi-mapper-flx4 config for a Pioneer DDJ-FLX4. Map buttons by asking your AI assistant (MCP),
-# with `midi-mapper-flx4 gui` or `midi-mapper-flx4 learn`, or edit by hand.
+# with `midi-mapper-flx4 map` (interactive diagram) or `midi-mapper-flx4 gui`, or edit by hand.
 #
 # Each [[map]] has one control (note = N or cc = N, plus channel = 1-16) and one action:
 #   keys   = "cmd+shift+p"        key combo (modifiers: cmd, ctrl, alt/option, shift)
