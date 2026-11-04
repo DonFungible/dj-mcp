@@ -10,19 +10,15 @@ git clone https://github.com/DonFungible/dj-mcp && cd dj-mcp
 uv sync                 # one .venv with every package installed in editable mode
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
-
-# serato-mcp (TypeScript, Node 22.13+, macOS)
-cd packages/serato-mcp && npm ci && npm run build
-npm test            # unit tests + MIDI loopback
-npm run test:e2e    # full MCP round-trip on a temporary copy of your Serato library
-npm run test:live   # read-only smoke test against your real library
 ```
 
 Some tests need things that may not be on your machine. They skip themselves when these are missing:
 
 - **A local rekordbox library:** read tests use it read-only. Write tests copy it into a temp folder and
   check that the copy is what was opened before writing anything.
+- **A local Serato library:** format tests read it, and crate tests write to a copy in a temp folder.
 - **Virtual MIDI ports:** available on macOS, and on Linux with the ALSA sequencer, but not on Windows.
+  serato-mcp's MIDI tests use CoreMIDI and only run on macOS.
 
 Never point a test that writes at a real library. Use `RekordboxLibrary(db_dir=<copy>)` and assert on
 `lib.db.engine.url.database` first, as `tests/test_writes_on_copy.py` does.
@@ -37,7 +33,8 @@ packages/
   spotify-dj-mcp/   client.py (Web API), auth.py (PKCE login), matching.py, server.py
   midi-mapper-flx4/ config.py, engine.py (actions), runtime.py (device loop), flx4.py (control names),
                     service.py (background mapper, button capture), server.py (MCP), gui.py + web/index.html
-  serato-mcp/       TypeScript: serato/ (file formats, library, writer), mix/ (keys, planner), control/ (MIDI, app)
+  serato-mcp/       binary.py, tags.py, sqlite.py, library.py (Serato's formats), writer.py (crate/metadata edits),
+                    keys.py, planner.py (set planning), coremidi.py, midi.py, app.py (deck and app control), server.py
 ```
 
 Keep logic in plain modules that can be tested without MCP, and keep `server.py` thin.
@@ -54,13 +51,13 @@ Anything that writes to a user's DJ library or account must:
 
 ## Adding a server
 
-1. Create `packages/<name>/` with `README.md`, `LICENSE` (copy the root one) and either a `pyproject.toml`
-   (Python) or a `package.json` (Node). Copy the metadata layout from an existing package.
-2. Python: add it to the root `pyproject.toml` (`dependencies` and `[tool.uv.sources]`), then `uv sync`.
-   Node: add it to `exclude` under `[tool.uv.workspace]` in the root `pyproject.toml`, and to the CI workflow.
+1. Create `packages/<name>/` with `README.md`, `LICENSE` (copy the root one) and a `pyproject.toml`. Copy the
+   metadata layout from an existing package.
+2. Add it to the root `pyproject.toml` (`dependencies` and `[tool.uv.sources]`), then `uv sync`. Avoid
+   dependencies without ready-made wheels for current Python versions, so `uvx <name>` works anywhere.
 3. Add it to the table in the root README and to `.mcp.json` if it's an MCP server.
 4. Check the name is free: `curl -s -o /dev/null -w "%{http_code}" https://pypi.org/pypi/<name>/json`
-   should print `404` (for npm: `npm view <name>` should fail with E404).
+   should print `404`.
 
 Ideas for new servers: Traktor, Engine DJ, VirtualDJ, Beatport and SoundCloud.
 
@@ -78,6 +75,6 @@ Each package is versioned and released on its own:
 2. Tag and push: `git tag <name>-v<version> && git push origin <name>-v<version>`
    (e.g. `rekordbox-mcp-v0.1.1`).
 3. The `release` workflow builds that package, checks the tag matches its version, and publishes it with
-   trusted publishing: Python packages to PyPI, serato-mcp to npm.
+   trusted publishing to PyPI.
 
 Release `rekordbox-mcp` before a `spotify-dj-mcp` version that needs new rekordbox features.

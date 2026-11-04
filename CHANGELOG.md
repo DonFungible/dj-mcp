@@ -26,6 +26,8 @@ Each package is released separately; entries are grouped by package.
   `suggest_next_tracks`, `analyze_set`, `.m3u8` export.
 - Crate and metadata editing with backups, refused while Serato is running.
 - Deck control over a virtual MIDI device, and loading tracks via Serato's search box.
+- Python, run with `uvx serato-mcp` like the other servers. The MIDI device uses macOS's CoreMIDI directly, so
+  there's nothing to compile.
 
 ## midi-mapper-flx4 0.1.0
 

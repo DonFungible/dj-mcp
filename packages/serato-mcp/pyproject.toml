@@ -1,0 +1,40 @@
+[project]
+name = "serato-mcp"
+version = "0.1.0"
+description = "MCP server for Serato DJ Pro: library, crates, cues, history, harmonic mix planning and MIDI deck control"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Don Fung" }]
+keywords = ["mcp", "serato", "dj", "crates", "harmonic-mixing", "midi", "claude", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Operating System :: MacOS",
+]
+dependencies = [
+    "mcp>=2.0,<3",
+    "mutagen>=1.47",
+]
+
+[project.urls]
+Homepage = "https://github.com/DonFungible/dj-mcp/tree/main/packages/serato-mcp"
+Repository = "https://github.com/DonFungible/dj-mcp"
+Issues = "https://github.com/DonFungible/dj-mcp/issues"
+
+[project.scripts]
+serato-mcp = "serato_mcp.server:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/serato_mcp"]

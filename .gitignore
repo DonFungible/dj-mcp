@@ -20,6 +20,4 @@ dist/
 # Claude Code per-user settings
 .claude/settings.local.json
 
-# Node (serato-mcp)
-node_modules/
 .scratch/

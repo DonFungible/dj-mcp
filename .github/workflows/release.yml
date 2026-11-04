@@ -1,17 +1,14 @@
 name: Release
 
 # Publish one package by pushing a tag named <package>-v<version>, e.g. rekordbox-mcp-v0.1.1.
-# Python packages go to PyPI, Node packages (serato-mcp) to npm. One-time setup, per package:
-#   PyPI: add a "trusted publisher" pointing at this repository, workflow "release.yml", environment "pypi".
-#   npm:  publish the first version by hand, then add a trusted publisher (Settings → Trusted publishing)
-#         pointing at this repository and workflow "release.yml".
+# One-time setup, per package: on PyPI, add a "trusted publisher" pointing at this repository, workflow
+# "release.yml", environment "pypi".
 on:
   push:
     tags: ["*-v*"]
 
 jobs:
   publish:
-    # serato-mcp's tests need macOS, but publishing only builds and packs, which works anywhere.
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -27,39 +24,16 @@ jobs:
           pkg="${tag%-v*}"
           version="${tag##*-v}"
           dir="packages/$pkg"
-          if [ -f "$dir/pyproject.toml" ]; then
-            kind=python
-            actual=$(grep -m1 '^version' "$dir/pyproject.toml" | cut -d'"' -f2)
-          elif [ -f "$dir/package.json" ]; then
-            kind=node
-            actual=$(node -p "require('./$dir/package.json').version")
-          else
+          if [ ! -f "$dir/pyproject.toml" ]; then
             echo "::error::No package named '$pkg' (from tag '$tag')"; exit 1
           fi
+          actual=$(grep -m1 '^version' "$dir/pyproject.toml" | cut -d'"' -f2)
           if [ "$actual" != "$version" ]; then
             echo "::error::Tag says $version but $dir says $actual"; exit 1
           fi
           echo "name=$pkg" >> "$GITHUB_OUTPUT"
-          echo "kind=$kind" >> "$GITHUB_OUTPUT"
 
-      # Python → PyPI
-      - if: steps.pkg.outputs.kind == 'python'
-        run: uv build --package "${{ steps.pkg.outputs.name }}" --out-dir dist
-      - if: steps.pkg.outputs.kind == 'python'
-        run: uvx twine check --strict dist/*
-      - if: steps.pkg.outputs.kind == 'python'
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - run: uv build --package "${{ steps.pkg.outputs.name }}" --out-dir dist
+      - run: uvx twine check --strict dist/*
+      - uses: pypa/gh-action-pypi-publish@release/v1
 
-      # Node → npm (trusted publishing needs npm 11.5.1+)
-      - if: steps.pkg.outputs.kind == 'node'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-      - if: steps.pkg.outputs.kind == 'node'
-        working-directory: packages/${{ steps.pkg.outputs.name }}
-        run: |
-          npm install -g npm@latest
-          npm ci
-          npm run build
-          npm publish --provenance --access public

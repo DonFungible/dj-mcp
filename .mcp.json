@@ -18,9 +18,10 @@
       ]
     },
     "serato": {
-      "command": "node",
+      "command": "uv",
       "args": [
-        "packages/serato-mcp/dist/index.js"
+        "run",
+        "serato-mcp"
       ],
       "env": {
         "SERATO_MCP_READONLY": "1"

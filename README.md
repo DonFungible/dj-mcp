@@ -6,7 +6,7 @@ rekordbox, Serato and Spotify, plus one that turns a Pioneer DDJ-FLX4 into a mac
 | Package | What it does | Install |
 | --- | --- | --- |
 | [**rekordbox-mcp**](packages/rekordbox-mcp) | Search your rekordbox 6/7 library, browse playlists, cues and history, find tracks that mix well, order tracks into a set, and (optionally) edit playlists | `uvx rekordbox-mcp` |
-| [**serato-mcp**](packages/serato-mcp) | Search your Serato library with cues and Mixed In Key energy, manage crates, plan harmonic sets, read play history, and drive the decks over MIDI (macOS) | `npx -y serato-mcp` |
+| [**serato-mcp**](packages/serato-mcp) | Search your Serato library with cues and Mixed In Key energy, manage crates, plan harmonic sets, read play history, and drive the decks over MIDI (macOS) | `uvx serato-mcp` |
 | [**spotify-dj-mcp**](packages/spotify-dj-mcp) | Browse your Spotify playlists and Liked Songs, and turn them into a DJ set from the tracks you own in rekordbox | `uvx spotify-dj-mcp` |
 | [**midi-mapper-flx4**](packages/midi-mapper-flx4) | Press a button on your DDJ-FLX4 and tell the AI what it should do ("open Discord"). Maps buttons, pads and jog wheels to apps, key combos, text and commands; also has a browser-based editor | `uvx --python 3.12 midi-mapper-flx4` |
 
@@ -19,8 +19,8 @@ Ask things like:
 
 ## Quick start
 
-The Python packages need [uv](https://docs.astral.sh/uv/getting-started/installation/), which provides `uvx`
-and fetches the right Python automatically. serato-mcp needs [Node.js](https://nodejs.org) 22.13+ (`npx`).
+Everything runs with [uv](https://docs.astral.sh/uv/getting-started/installation/), which provides `uvx` and
+fetches the right Python automatically.
 
 ### Claude Desktop
 
@@ -34,8 +34,8 @@ Open **Settings → Developer → Edit Config** and add the servers you want:
       "args": ["rekordbox-mcp"]
     },
     "serato": {
-      "command": "npx",
-      "args": ["-y", "serato-mcp"]
+      "command": "uvx",
+      "args": ["serato-mcp"]
     },
     "spotify": {
       "command": "uvx",
@@ -57,7 +57,7 @@ Restart Claude Desktop. The Spotify server needs a one-time login first; see its
 
 ```sh
 claude mcp add rekordbox -- uvx rekordbox-mcp
-claude mcp add serato -- npx -y serato-mcp
+claude mcp add serato -- uvx serato-mcp
 claude mcp add spotify -e SPOTIFY_CLIENT_ID=your-client-id -- uvx spotify-dj-mcp
 claude mcp add flx4 -- uvx --python 3.12 midi-mapper-flx4
 ```
@@ -69,7 +69,7 @@ Use the same `command`/`args`/`env` as the Claude Desktop example in your client
 
 ### Not published yet?
 
-Until the Python packages are on PyPI, install them straight from GitHub:
+Until the packages are on PyPI, install them straight from GitHub:
 
 ```sh
 uvx --from "git+https://github.com/DonFungible/dj-mcp#subdirectory=packages/rekordbox-mcp" rekordbox-mcp
@@ -77,7 +77,6 @@ uvx --from "git+https://github.com/DonFungible/dj-mcp#subdirectory=packages/reko
 
 Use the same pattern for the other packages. `spotify-dj-mcp` depends on `rekordbox-mcp`, so add
 `--with "git+https://github.com/DonFungible/dj-mcp#subdirectory=packages/rekordbox-mcp"`.
-For serato-mcp before it's on npm, see [its install notes](packages/serato-mcp#install).
 
 ## Safety
 
@@ -109,20 +108,18 @@ Reports from other setups are very welcome. Please [open an issue](https://githu
 
 ## Development
 
-The Python packages form a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/), one per
-directory under `packages/`. serato-mcp is a TypeScript package in the same folder, managed with npm.
+The packages form a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/), one per directory
+under `packages/`.
 
 ```sh
 git clone https://github.com/DonFungible/dj-mcp && cd dj-mcp
 uv sync              # creates .venv with every package installed in editable mode
 uv run pytest        # tests that need rekordbox or virtual MIDI ports skip themselves when unavailable
 uv run ruff check .
-
-cd packages/serato-mcp && npm ci && npm run build && npm test   # the Node package
 ```
 
 Opening the repo in Claude Code picks up the servers from [`.mcp.json`](.mcp.json), running from your
-checkout (read-only by default; build serato-mcp first). See [CONTRIBUTING.md](CONTRIBUTING.md) for
+checkout (read-only by default). See [CONTRIBUTING.md](CONTRIBUTING.md) for
 conventions and how to add a server.
 
 ## License
