@@ -2,9 +2,9 @@
 
 The drawing follows the hardware: two decks (jog wheel, loop buttons, sync and tempo on the outer edge, mode
 buttons, eight pads, play and cue) around a mixer (browse and load, channel knobs, headphone cues, channel
-faders, crossfader). Controls recede until they matter:
+faders, crossfader). Every control is drawn as a button and changes shape with its state:
 
-     Play     not mapped        (Play)   mapped        »Play«   pressed / selected
+    [Play]   not mapped        (Play)   mapped        »Play«   pressed / selected
 
 With color, mapped controls are green and the pressed one is highlighted; the frame and decoration are dim.
 """
@@ -19,7 +19,7 @@ from .flx4 import PAD_CHANNELS, coarse
 DECK_W, MIXER_W = 34, 24
 SECTIONS = {"deck1": 0, "mixer": DECK_W + 1, "deck2": DECK_W + 1 + MIXER_W + 1}  # x offset inside the frame
 WIDTH = DECK_W + 1 + MIXER_W + 1 + DECK_W  # inner width
-ROWS = 14
+ROWS = 15
 
 RESET, DIM, GREEN, HILITE, BOLD = "\x1b[0m", "\x1b[2m", "\x1b[32m", "\x1b[1;30;43m", "\x1b[1m"
 LEGEND = "(Play) mapped    »Play« selected    press a control to select it"
@@ -45,13 +45,15 @@ def _id(kind: str, channel: int, number: int) -> str:
 
 # ---- layout -----------------------------------------------------------------------------------------
 
+# Terminal cells are about twice as tall as they are wide, so a round wheel is ~2.4x wider than tall.
 JOG = [
-    "   .-~~~~~~~~~-.   ",
-    " /               \\ ",
-    "|                 |",
-    "|                 |",
-    " \\               / ",
-    "   '-~~~~~~~~~-'   ",
+    "    ╭───────╮    ",
+    "  ╭─╯       ╰─╮  ",
+    " ╭╯           ╰╮ ",
+    " │             │ ",
+    " ╰╮           ╭╯ ",
+    "  ╰─╮       ╭─╯  ",
+    "    ╰───────╯    ",
 ]
 JOG_TOP = 2
 
@@ -67,21 +69,21 @@ def _deck(d: int) -> tuple[list[Widget], list[tuple[int, int, str]]]:
     widgets = [
         Widget(f"lin{d}", 1, main + 1, 11, "Loop in", {n(16)}),
         Widget(f"lout{d}", 1, main + 12, 11, "Loop out", {n(17)}),
-        Widget(f"jog{d}", JOG_TOP + 2, jog_x, len(JOG[0]), "Jog", {_id("cc", d, 33), _id("cc", d, 34), n(54)}),
+        Widget(f"jog{d}", JOG_TOP + 3, jog_x, len(JOG[0]), "Jog", {_id("cc", d, 33), _id("cc", d, 34), n(54)}),
         Widget(f"sync{d}", 2, edge, 7, "Sync", {n(88)}),
-        Widget(f"tempo{d}", 7, edge, 7, "Tempo", {_id("cc", d, 0)}),
-        Widget(f"cue{d}", 13, x + 1, 8, "Cue", {n(12), n(72)}),
-        Widget(f"play{d}", 13, x + 9, 8, "Play", {n(11), n(71)}),
+        Widget(f"tempo{d}", 8, edge, 7, "Tempo", {_id("cc", d, 0)}),
+        Widget(f"cue{d}", 14, x + 1, 8, "Cue", {n(12), n(72)}),
+        Widget(f"play{d}", 14, x + 9, 8, "Play", {n(11), n(71)}),
     ]
-    for i, (label, num) in enumerate((("Hot cue", 27), ("Pad FX", 30), ("Jump", 32), ("Sample", 34))):
-        widgets.append(Widget(("hc", "pfx", "bj", "smp")[i] + str(d), 9, x + 1 + i * 8, 8, label, {n(num)}))
+    for i, (label, num) in enumerate((("Hotcue", 27), ("Pad FX", 30), ("Jump", 32), ("Sample", 34))):
+        widgets.append(Widget(("hc", "pfx", "bj", "smp")[i] + str(d), 10, x + 1 + i * 8, 8, label, {n(num)}))
     for k in range(8):
-        row, colno = (10, k) if k < 4 else (11, k - 4)
+        row, colno = (11, k) if k < 4 else (12, k - 4)
         ids = {_id("note", ch, mode * 16 + k) for ch in pad_channels for mode in range(8)}
-        widgets.append(Widget(f"pad{d}_{k + 1}", row, x + 1 + colno * 8, 8, f" {k + 1} ", ids))
+        widgets.append(Widget(f"pad{d}_{k + 1}", row, x + 1 + colno * 8, 8, f"  {k + 1}  ", ids))
     art = [(JOG_TOP + i, jog_x, line) for i, line in enumerate(JOG)]
     rail = edge + 3
-    art += [(3, rail, "┬"), (4, rail, "│"), (5, rail, "╪"), (6, rail, "┴")]
+    art += [(3, rail, "┬"), (4, rail, "│"), (5, rail, "╪"), (6, rail, "│"), (7, rail, "┴")]
     return widgets, art
 
 
@@ -96,18 +98,18 @@ def _mixer() -> tuple[list[Widget], list[tuple[int, int, str]]]:
         Widget("master", 3, mid, 8, "Master", {_id("cc", 7, 8)}),
         Widget("phones", 4, mid, 8, "Phones", {_id("cc", 7, 13)}),
         Widget("hpmix", 5, mid, 8, "HP mix", {_id("cc", 7, 12)}),
-        Widget("xfader", 13, x, MIXER_W, "Crossfader", {_id("cc", 7, 31)}),
+        Widget("xfader", 14, x, MIXER_W, "Crossfader", {_id("cc", 7, 31)}),
     ]
     for d, col in ((1, left), (2, right)):
         for row, label, cc in ((3, "Trim", 4), (4, "Hi", 7), (5, "Mid", 11), (6, "Low", 15)):
             widgets.append(Widget(f"{label.lower()}{d}", row, col, 8, label, {_id("cc", d, cc)}))
         widgets.append(Widget(f"cfx{d}", 7, col, 8, "CFX", {_id("cc", 7, 22 + d)}))
-        widgets.append(Widget(f"hp{d}", 8, col, 8, "HP cue", {_id("note", d, 84)}))
-        widgets.append(Widget(f"fader{d}", 12, col, 8, "Fader", {_id("cc", d, 19)}))
+        widgets.append(Widget(f"hp{d}", 9, col, 8, "HP cue", {_id("note", d, 84)}))
+        widgets.append(Widget(f"fader{d}", 13, col, 8, "Fader", {_id("cc", d, 19)}))
     art = []
     for col in (left + 3, right + 3):
-        art += [(9, col, "┬"), (10, col, "╪"), (11, col, "┴")]
-    art.append((12, mid, " ├──╪──┤"))
+        art += [(10, col, "┬"), (11, col, "╪"), (12, col, "┴")]
+    art.append((13, mid, " ├──╪──┤"))
     return widgets, art
 
 
@@ -158,13 +160,13 @@ def render(
     for row, col, text in ART:
         put(row, col, text, DIM)
     hot = widget_for(pressed) if pressed else None
-    for w in WIDGETS:
+    for w in WIDGETS:  # same width in every state, so the layout never shifts
         if w is hot:
             put(w.row, w.start, f"»{w.label}«", HILITE)
         elif w.ids & mapped:
             put(w.row, w.start, f"({w.label})", GREEN)
         else:
-            put(w.row, w.start, f" {w.label} ")
+            put(w.row, w.start, f"[{w.label}]")
 
     divider = f"{DIM}│{RESET}" if color else "│"
     lines = []

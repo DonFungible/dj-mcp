@@ -95,20 +95,21 @@ control. Mapped controls are shown in green and in parentheses, the selected one
 
 ```
 ╭─ Deck 1 ─────────────────────────┬─ Mixer ────────────────┬─ Deck 2 ─────────────────────────╮
-│                                  │        Beat FX         │                                  │
-│            Loop in   Loop out    │ ◀ Load  Browse  Load ▶ │    Loop in   Loop out            │
-│  Sync        .-~~~~~~~~~-.       │                        │      .-~~~~~~~~~-.        Sync   │
-│    ┬       /               \     │  Trim   Master   Trim  │    /               \        ┬    │
-│    │      |      (Jog)      |    │   Hi    Phones    Hi   │   |       Jog       |       │    │
-│    ╪      |                 |    │  Mid    HP mix   Mid   │   |                 |       ╪    │
-│    ┴       \               /     │  Low             Low   │    \               /        ┴    │
-│  Tempo       '-~~~~~~~~~-'       │  CFX             CFX   │      '-~~~~~~~~~-'        Tempo  │
-│                                  │ HP cue          HP cue │                                  │
-│ Hot cue  Pad FX   Jump   Sample  │   ┬               ┬    │ Hot cue  Pad FX   Jump   Sample  │
-│  ( 1 )     2       3       4     │   ╪               ╪    │    1       2       3       4     │
-│    5       6       7       8     │   ┴               ┴    │    5       6       7       8     │
-│                                  │ Fader   ├──╪──┤ Fader  │                                  │
-│   Cue    (Play)                  │       Crossfader       │   Cue    »Play«                  │
+│                                  │       [Beat FX]        │                                  │
+│           [Loop in] [Loop out]   │[◀ Load][Browse][Load ▶]│   [Loop in] [Loop out]           │
+│ [Sync]         ╭───────╮         │                        │        ╭───────╮         [Sync]  │
+│    ┬         ╭─╯       ╰─╮       │ [Trim] [Master] [Trim] │      ╭─╯       ╰─╮          ┬    │
+│    │        ╭╯           ╰╮      │  [Hi]  [Phones]  [Hi]  │     ╭╯           ╰╮         │    │
+│    ╪        │    (Jog)    │      │ [Mid]  [HP mix] [Mid]  │     │    [Jog]    │         ╪    │
+│    │        ╰╮           ╭╯      │ [Low]           [Low]  │     ╰╮           ╭╯         │    │
+│    ┴         ╰─╮       ╭─╯       │ [CFX]           [CFX]  │      ╰─╮       ╭─╯          ┴    │
+│ [Tempo]        ╰───────╯         │                        │        ╰───────╯         [Tempo] │
+│                                  │[HP cue]        [HP cue]│                                  │
+│ [Hotcue][Pad FX] [Jump] [Sample] │   ┬               ┬    │ [Hotcue][Pad FX] [Jump] [Sample] │
+│ (  1  ) [  2  ] [  3  ] [  4  ]  │   ╪               ╪    │ [  1  ] [  2  ] [  3  ] [  4  ]  │
+│ [  5  ] [  6  ] [  7  ] [  8  ]  │   ┴               ┴    │ [  5  ] [  6  ] [  7  ] [  8  ]  │
+│                                  │[Fader]  ├──╪──┤[Fader] │                                  │
+│  [Cue]   (Play)                  │      [Crossfader]      │  [Cue]   »Play«                  │
 ╰──────────────────────────────────┴────────────────────────┴──────────────────────────────────╯
   (Play) mapped    »Play« selected    press a control to select it
 ```
