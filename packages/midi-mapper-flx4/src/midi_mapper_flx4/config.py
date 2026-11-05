@@ -99,6 +99,7 @@ class Mapping:
     keys_cw: str | None = None  # combo per clockwise step (cc only)
     keys_ccw: str | None = None
     encoding: str = "offset64"
+    ticks: int | None = None  # jog/encoder movement per step (cc only); None = the default for the action
 
     @property
     def label(self) -> str:
@@ -154,6 +155,11 @@ def parse_config(text: str) -> Config:
             raise ConfigError(f'{where}: app must be an application name, e.g. "Discord"')
         if "scroll" in m and not isinstance(m["scroll"], int):
             raise ConfigError(f"{where}: scroll must be a whole number of lines per step")
+        ticks = m.get("ticks")
+        if ticks is not None and not (isinstance(ticks, int) and 1 <= ticks <= 1000):
+            raise ConfigError(f"{where}: ticks must be a whole number from 1 to 1000")
+        if ticks is not None and action not in ("scroll", "keys_cw", "keys_ccw"):
+            raise ConfigError(f"{where}: ticks only applies to scroll and keys_cw/keys_ccw (jog wheels, knobs)")
         enc = m.get("encoding", "offset64")
         if enc not in ENCODINGS:
             raise ConfigError(f"{where}: encoding must be one of {ENCODINGS}")
@@ -171,6 +177,7 @@ def parse_config(text: str) -> Config:
             keys_cw=m.get("keys_cw"),
             keys_ccw=m.get("keys_ccw"),
             encoding=enc,
+            ticks=ticks,
         )
     return cfg
 
@@ -221,6 +228,8 @@ def mapping_action(m: Mapping) -> dict[str, str | int]:
         action = {"app": m.app}
     else:
         action = {"shell": m.shell}
+    if m.ticks is not None:
+        action["ticks"] = m.ticks
     if m.encoding != "offset64":
         action["encoding"] = m.encoding
     return action
@@ -248,6 +257,7 @@ def mapping_to_json(m: Mapping) -> dict:
         "label": m.label,
         "action": action,
         "encoding": m.encoding,
+        "ticks": m.ticks,
     }
 
 
@@ -276,6 +286,11 @@ def mapping_from_json(d: dict) -> Mapping:
         action = {"keys_cw": str(a.get("cw") or ""), "keys_ccw": str(a.get("ccw") or "")}
     else:
         raise ConfigError(f"Unknown action type {kind!r}")
+    if d.get("ticks") is not None:
+        try:
+            action["ticks"] = int(d["ticks"])
+        except (TypeError, ValueError) as e:
+            raise ConfigError("ticks must be a whole number") from e
     if d.get("encoding", "offset64") != "offset64":
         action["encoding"] = d["encoding"]
     cfg = parse_config(mapping_block(ctrl, action, str(d.get("name") or "").strip()))

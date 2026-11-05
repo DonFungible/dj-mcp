@@ -56,7 +56,9 @@ your first button. It keeps running after you close the assistant. Stop it with
 **macOS:** opening apps and running commands work straight away. Key combos, typing and scrolling need
 Accessibility permission for the app that started the mapper (usually your terminal): System Settings →
 Privacy & Security → Accessibility. Then restart the mapper. The assistant tells you when it's missing.
-Recording a shortcut by pressing it also needs Input Monitoring in the same place.
+Recording a shortcut by pressing it also needs Input Monitoring in the same place. midi-mapper-flx4 asks
+macOS to show these prompts when they're needed (or run `midi-mapper-flx4 permissions`); macOS shows each
+prompt once, then opens System Settings instead.
 
 ## Actions
 
@@ -165,6 +167,20 @@ scroll = 3
 
 Each `[[map]]` has one control (`note = N` or `cc = N`, plus `channel = 1`–`16`) and one action: `app`,
 `keys`, `text`, `shell`, `scroll`, or `keys_cw` + `keys_ccw`.
+
+Jog wheels send a fast stream of small movements ("ticks"). `ticks = N` sets how far the wheel turns per
+step: the default is 24 for `keys_cw`/`keys_ccw` (one tab switch takes a deliberate nudge) and 1 for
+`scroll`. Raise it if the wheel feels too sensitive, lower it if it feels sluggish:
+
+```toml
+[[map]]
+name = "Switch tabs"
+cc = 33
+channel = 2
+keys_cw = "cmd+shift+]"
+keys_ccw = "cmd+shift+["
+ticks = 40
+```
 
 ### FLX4 controls
 

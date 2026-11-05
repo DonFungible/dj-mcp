@@ -174,6 +174,24 @@ def record_keys(timeout_seconds: int = 30) -> dict[str, Any]:
     return {"combo": pressed}
 
 
+@tool(ACTS)
+def request_permissions() -> dict[str, Any]:
+    """Ask macOS for the permissions that keystroke/scroll mappings (Accessibility) and record_keys (Input
+    Monitoring) need. macOS shows its own prompt the first time and System Settings after that; the user has to
+    turn on their terminal app there. Call it when status shows keystrokes are blocked, or the user asks."""
+    from . import permissions
+
+    keys, listen = permissions.request_send_keys(), permissions.request_listen()
+    return {
+        "accessibility": keys,
+        "input_monitoring": listen,
+        "next_step": None
+        if keys and listen
+        else "Turn on the terminal app in the macOS prompt or System Settings > Privacy & Security, then restart "
+        "the mapper (stop_mapper, then start_mapper).",
+    }
+
+
 @tool(WRITE)
 def map_button(
     control: str,
@@ -181,6 +199,7 @@ def map_button(
     value: str | None = None,
     counter_clockwise: str | None = None,
     name: str | None = None,
+    ticks_per_step: int | None = None,
 ) -> dict[str, Any]:
     """Save what a control does, replacing any existing mapping for it, and make sure the mapper is running.
 
@@ -196,6 +215,8 @@ def map_button(
       turn   value = combo per clockwise step, counter_clockwise = combo per counter-clockwise step
              (jog wheels only), e.g. value "down", counter_clockwise "up".
     name: short label shown in lists, e.g. "Open Discord".
+    ticks_per_step: jog wheels only: how far the wheel turns per step (default 24 for turn, 1 for scroll).
+             Raise it when the user says the wheel is too sensitive, lower it when it's sluggish.
     """
     ctrl = parse_control_id(control)
     if action == "turn":
@@ -203,17 +224,26 @@ def map_button(
     else:
         spec = {"type": action, "value": value}
     m = mapping_from_json(
-        {"control": {"kind": ctrl.kind, "channel": ctrl.channel, "number": ctrl.number}, "action": spec, "name": name}
+        {
+            "control": {"kind": ctrl.kind, "channel": ctrl.channel, "number": ctrl.number},
+            "action": spec,
+            "name": name,
+            "ticks": ticks_per_step,
+        }
     )
     replaced = _config().mappings.get(ctrl)
     _editor().save_mapping(m)
     result = {"saved": _describe(m), "replaced": _describe(replaced) if replaced else None, **_ensure_mapper()}
-    if action in ("keys", "text", "scroll", "turn") and service.mapper_can_type(config_path) is False:
-        result["warning"] = service.KEYSTROKE_HELP
-    elif action in ("keys", "text", "scroll", "turn") and accessibility_trusted() is False:
+    blocked = service.mapper_can_type(config_path) is False or (
+        service.mapper_can_type(config_path) is None and accessibility_trusted() is False
+    )
+    if service.needs_keystrokes(m) and blocked:
+        from . import permissions
+
+        permissions.request_send_keys()
         result["warning"] = (
-            "macOS Accessibility permission is missing, so this mapping won't do anything yet. Allow the terminal "
-            "in System Settings > Privacy & Security > Accessibility, then restart the mapper."
+            "This mapping needs macOS Accessibility permission, which the terminal running the mapper doesn't have "
+            f"yet. {service.PROMPTED} Tell the user."
         )
     return result
 

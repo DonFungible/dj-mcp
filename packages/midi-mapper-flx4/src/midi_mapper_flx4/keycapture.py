@@ -84,19 +84,23 @@ def record_combo(timeout: float = 20.0) -> str | None:
     def on_release(key):
         held.discard(key_name(key) or "")
 
+    from . import permissions
+
     kwargs = {}
     if sys.platform == "darwin":
-        # Swallow every key while recording so the combo doesn't also act on the terminal or the front app.
-        kwargs["darwin_intercept"] = lambda event_type, event: None
+        can_listen = permissions.request_listen()
+        if permissions.can_send_keys():
+            # Swallow every key while recording so the combo doesn't also act on the terminal or the front app.
+            kwargs["darwin_intercept"] = lambda event_type, event: None
+        elif not can_listen:
+            raise RecordError(
+                "macOS is asking for Input Monitoring permission: choose Open System Settings, turn on your "
+                "terminal, then quit and reopen it. Until then, type the combo instead."
+            )
     listener = keyboard.Listener(on_press=on_press, on_release=on_release, **kwargs)
     listener.start()
     try:
         listener.wait()
-        if sys.platform == "darwin" and getattr(listener, "IS_TRUSTED", True) is False:
-            raise RecordError(
-                "macOS didn't allow listening to the keyboard. Allow your terminal in System Settings > Privacy & "
-                "Security > Accessibility and Input Monitoring, then restart it."
-            )
         if not done.wait(timeout):
             raise RecordError("No keys were pressed.")
         return result[0]

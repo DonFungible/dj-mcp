@@ -107,10 +107,18 @@ class Executor:
         self._mouse.scroll(0, -lines)  # clockwise = scroll down
 
 
+# How far a jog wheel or knob turns (in ticks) per step, unless a mapping sets `ticks`. Turning a wheel sends a
+# fast stream of ticks; one key combo per tick switches dozens of tabs per flick, so "turn" mappings need far
+# more movement per step than scrolling does.
+DEFAULT_TICKS = {"scroll": 1, "turn": 24}
+IDLE_RESET = 0.6  # seconds; leftover movement from an earlier turn doesn't count towards the next step
+
+
 class Mapper:
     def __init__(self, config: Config, executor: Executor):
         self.config = config
         self.executor = executor
+        self._travel: dict[Control, tuple[int, float]] = {}  # accumulated ticks, time of last tick
 
     def handle(self, msg) -> Mapping | None:
         ctrl = Control.from_message(msg)
@@ -122,7 +130,17 @@ class Mapper:
             delta = relative_delta(msg.value, m.encoding)
             if delta == 0:
                 return None
-            steps = min(abs(delta), MAX_STEPS_PER_MESSAGE)
+            per_step = m.ticks or DEFAULT_TICKS["scroll" if m.scroll is not None else "turn"]
+            now = time.monotonic()
+            travel, last = self._travel.get(ctrl, (0, 0.0))
+            if now - last > IDLE_RESET or (travel > 0) != (delta > 0):
+                travel = 0  # a fresh turn, or a change of direction, starts counting again
+            travel += delta
+            steps = min(abs(travel) // per_step, MAX_STEPS_PER_MESSAGE)
+            travel -= steps * per_step * (1 if travel > 0 else -1)
+            self._travel[ctrl] = (travel, now)
+            if steps == 0:
+                return None
             if m.scroll is not None:
                 ex.scroll(steps * m.scroll * (1 if delta > 0 else -1))
             else:

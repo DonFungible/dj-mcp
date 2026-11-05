@@ -40,7 +40,13 @@ class Runtime:
 
     # ------------------------------------------------------------- lifecycle
     def start(self) -> None:
+        from . import permissions
+
         service.claim(self.path)
+        self._can_type = permissions.can_send_keys()
+        if self._can_type is False and any(service.needs_keystrokes(m) for m in self.config.mappings.values()):
+            permissions.request_send_keys()  # macOS shows its prompt for the app that started the mapper
+            log("asked macOS for Accessibility permission (needed for keystroke and scroll mappings)")
         threading.Thread(target=self._device_loop, daemon=True).start()
 
     def stop(self) -> None:
@@ -53,8 +59,15 @@ class Runtime:
     def _device_loop(self) -> None:
         import mido
 
+        from . import permissions
+
         while not self._stop.is_set():
             try:
+                can_type = permissions.can_send_keys()
+                if can_type != getattr(self, "_can_type", can_type):
+                    self._can_type = can_type
+                    service.write_status(self.path, can_type)
+                    log("keystrokes allowed" if can_type else "keystrokes blocked by macOS")
                 self._maybe_reload()
                 names = input_names()
                 if names != self.devices:

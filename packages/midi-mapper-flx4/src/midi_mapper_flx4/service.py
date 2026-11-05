@@ -65,8 +65,16 @@ def claim(config: Path) -> None:
             f"another mapper is already running (pid {other}). Stop it with `midi-mapper-flx4 stop` first."
         )
     pid_file(config).write_text(str(os.getpid()))
-    trusted = accessibility_trusted()
-    status_file(config).write_text(json.dumps({"pid": os.getpid(), "accessibility": trusted}))
+    write_status(config, accessibility_trusted())
+
+
+def write_status(config: Path, can_type: bool | None) -> None:
+    status_file(config).write_text(json.dumps({"pid": os.getpid(), "accessibility": can_type}))
+
+
+def needs_keystrokes(m) -> bool:
+    """Whether a mapping sends keystrokes or scrolls (which macOS gates behind Accessibility)."""
+    return any(v is not None for v in (m.keys, m.text, m.scroll, m.keys_cw))
 
 
 def status_file(config: Path) -> Path:
@@ -85,6 +93,10 @@ def mapper_can_type(config: Path) -> bool | None:
     return status.get("accessibility") if status.get("pid") == pid else None
 
 
+PROMPTED = (
+    "macOS is showing a permission prompt: choose Open System Settings and turn on your terminal under "
+    "Accessibility. The mapper picks the change up within a few seconds."
+)
 KEYSTROKE_HELP = (
     "The mapper can't send keystrokes or scroll: macOS hasn't given Accessibility permission to the app that "
     "started it (your terminal). Allow it in System Settings > Privacy & Security > Accessibility, then restart "

@@ -122,11 +122,33 @@ class MapperUI:
 
         c = self.selected
         assert c is not None
+        ticks = spec.pop("ticks", None)
         m = mapping_from_json(
-            {"control": {"kind": c.kind, "channel": c.channel, "number": c.number}, "action": spec, "name": name}
+            {
+                "control": {"kind": c.kind, "channel": c.channel, "number": c.number},
+                "action": spec,
+                "name": name,
+                "ticks": ticks,
+            }
         )
         Runtime(self.config, verbose=False).save_mapping(m)
         self.message = f"Saved: {control_name(c)} → {describe(m)}"
+        if service.needs_keystrokes(m) and self.keystrokes_blocked():
+            self.ask_for_keystrokes()
+            self.message += f"\n  {service.PROMPTED}"
+
+    def keystrokes_blocked(self) -> bool:
+        from . import permissions
+
+        if service.running_pid(self.config):
+            return service.mapper_can_type(self.config) is False
+        return permissions.can_send_keys() is False
+
+    def ask_for_keystrokes(self) -> None:
+        """Have macOS prompt for Accessibility for this terminal (the mapper gets it too: same terminal)."""
+        from . import permissions
+
+        permissions.request_send_keys()
 
     def remove(self) -> None:
         from .runtime import Runtime
@@ -204,6 +226,9 @@ class MapperUI:
                         self.message = "Nothing entered; not saved."
                         return
                     spec = {"type": "turn", "cw": cw, "ccw": ccw}
+                    ticks = input("  How far to turn per step? Enter for 24; higher is less sensitive: ").strip()
+                    if ticks:
+                        spec["ticks"] = ticks
                 elif choice == "k":
                     value = self.combo(keys, "key combo (e.g. cmd+shift+p)")
                     if not value:
@@ -272,6 +297,9 @@ class MapperUI:
         port_name = next((n for n in input_names() if device.lower() in n.lower()), None)
         if port_name is None:
             raise SystemExit(f"The {DEVICE} isn't connected. Plug it in over USB and try again.")
+        if any(service.needs_keystrokes(m) for m in self.mappings().values()) and self.keystrokes_blocked():
+            self.ask_for_keystrokes()
+            self.message = service.PROMPTED
         if shutil.get_terminal_size().columns < WIDTH + 2:
             print(f"Tip: widen the terminal to {WIDTH + 2} columns to see the whole controller.")
         # Windows lets only one program open a MIDI device, so the background mapper steps aside meanwhile.

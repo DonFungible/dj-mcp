@@ -90,6 +90,21 @@ def cmd_gui(args) -> None:
     serve(Runtime(args.config, dry_run=args.dry_run), port=args.port, open_browser=not args.no_browser)
 
 
+def cmd_permissions(_args) -> None:
+    from . import permissions
+
+    if permissions.can_send_keys() is None:
+        print("Nothing to set up: permissions are only needed on macOS.")
+        return
+    keys = permissions.request_send_keys()
+    listen = permissions.request_listen()
+    print(f"Accessibility (send keystrokes, scroll): {'allowed' if keys else 'not yet - macOS is asking'}")
+    print(f"Input Monitoring (record shortcuts):     {'allowed' if listen else 'not yet - macOS is asking'}")
+    if not (keys and listen):
+        print("Turn on this terminal app in the prompts (or System Settings > Privacy & Security), then restart the")
+        print("mapper: midi-mapper-flx4 stop, then start it again from this terminal.")
+
+
 def cmd_stop(args) -> None:
     from .service import stop_background
 
@@ -153,6 +168,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--dry-run", action="store_true", help="log actions instead of performing them")
     p.set_defaults(func=cmd_gui)
     sub.add_parser("stop", help="stop a mapper running in the background").set_defaults(func=cmd_stop)
+    sub.add_parser(
+        "permissions", help="ask macOS for the permissions keystrokes and shortcut recording need"
+    ).set_defaults(func=cmd_permissions)
     sub.add_parser("status", help="is the mapper running and the FLX4 connected?").set_defaults(func=cmd_status)
     args = ap.parse_args(argv)
     try:

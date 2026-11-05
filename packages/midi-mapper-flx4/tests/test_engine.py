@@ -70,9 +70,42 @@ def test_encoders(mapper):
     mapper.handle(mido.Message("control_change", channel=0, control=34, value=65))
     mapper.handle(mido.Message("control_change", channel=0, control=34, value=62))
     mapper.handle(mido.Message("control_change", channel=0, control=34, value=64))  # no movement
-    mapper.handle(mido.Message("control_change", channel=1, control=34, value=63))
-    mapper.handle(mido.Message("control_change", channel=1, control=34, value=127))  # capped at 10
-    assert calls(mapper) == [("scroll", 3), ("scroll", -6), ("keys", "up", 1), ("keys", "down", 10)]
+    assert calls(mapper) == [("scroll", 3), ("scroll", -6)]  # scrolling: every tick counts
+
+
+def test_turn_mappings_need_real_movement_per_step(mapper, monkeypatch):
+    from midi_mapper_flx4 import engine
+
+    def turn(value, times=1):
+        for _ in range(times):
+            mapper.handle(mido.Message("control_change", channel=1, control=34, value=value))
+
+    turn(65, 23)  # 23 ticks clockwise: not a full step yet
+    assert calls(mapper) == []
+    turn(65)  # the 24th tick
+    assert calls(mapper) == [("keys", "down", 1)]
+    turn(63, 30)  # reversing starts counting again: 30 ticks back is one step
+    assert calls(mapper)[1:] == [("keys", "up", 1)]
+    turn(127)  # one big flick of 63 ticks clockwise
+    assert calls(mapper)[2:] == [("keys", "down", 2)]
+    clock = [engine.time.monotonic() + 100]  # well after the flick above
+    monkeypatch.setattr(engine.time, "monotonic", lambda: clock[0])
+    turn(65, 20)
+    clock[0] += 5  # a pause: leftover movement doesn't count towards the next step
+    turn(65, 20)
+    assert len(calls(mapper)) == 3
+
+
+def test_ticks_can_be_set_per_mapping():
+    from midi_mapper_flx4.config import mapping_block, parse_config
+
+    m = Mapper(
+        parse_config(mapping_block(Control("cc", 2, 33), {"keys_cw": "right", "keys_ccw": "left", "ticks": 4})),
+        Recorder(),
+    )
+    for _ in range(8):
+        m.handle(mido.Message("control_change", channel=1, control=33, value=65))
+    assert calls(m) == [("keys", "right", 1), ("keys", "right", 1)]
 
 
 def test_cc_button_fires_only_at_full(mapper):
