@@ -14,12 +14,18 @@ from .engine import Executor, Mapper, PauseWatcher, input_names, log
 from .flx4 import control_id, control_name
 
 POLL_SECONDS = 2.0
+# While the controller is idle, reopen its connection this often. A quick replug or DJ software resetting the
+# FLX4 can leave a connection with the same name that silently delivers nothing; reopening costs milliseconds.
+REFRESH_IDLE = 20.0
 LEARN_TIMEOUT = 60.0  # learning auto-expires so a closed browser tab can't leave mappings suppressed
 EVENT_MIN_INTERVAL = 0.05  # per-control throttle for jog/fader streams sent to the GUI
 
 
 class Runtime:
     def __init__(self, path: Path, dry_run: bool = False, verbose: bool = True):
+        from . import midiwatch
+
+        midiwatch.start()  # see midiwatch: without it, replugs and DJ-software resets go unnoticed
         self.path = Path(path)
         self.config: Config = load_config(self.path)
         self.mapper = Mapper(self.config, Executor(dry_run=dry_run))
@@ -37,6 +43,8 @@ class Runtime:
         self._wake = threading.Event()
         self.devices: list[str] = []
         self._reconnect = False
+        self._quiet_refresh = False
+        self._last_activity = time.monotonic()
         self.watcher = PauseWatcher(self.config.pause_when_running, on_change=self._on_pause_change)
 
     # ------------------------------------------------------------- lifecycle
@@ -75,18 +83,24 @@ class Runtime:
                     self.devices = names
                     self.emit_state()
                 wanted = next((n for n in names if self.config.device.lower() in n.lower()), None)
+                idle = time.monotonic() - self._last_activity > REFRESH_IDLE
+                if self._port is not None and wanted == self.port_name and idle:
+                    self._reconnect = True  # quiet refresh; see REFRESH_IDLE
                 if self._port is not None and (wanted != self.port_name or self._reconnect):
                     self._port.close()
                     self._port, self.port_name = None, None
                     if not self._reconnect:
                         log("controller disconnected")
-                    self.emit_state()
+                        self.emit_state()
+                self._quiet_refresh = self._reconnect and idle
                 self._reconnect = False
                 if self._port is None and wanted:
                     self._port = mido.open_input(wanted, callback=self.on_message)
                     self.port_name = wanted
-                    log(f"listening on {wanted} with {len(self.config.mappings)} mapping(s)")
-                    self.emit_state()
+                    self._last_activity = time.monotonic()
+                    if not self._quiet_refresh:
+                        log(f"listening on {wanted} with {len(self.config.mappings)} mapping(s)")
+                        self.emit_state()
             except Exception as e:  # noqa: BLE001 - keep retrying
                 log("device check failed:", e)
             self._wake.wait(POLL_SECONDS)
@@ -202,6 +216,7 @@ class Runtime:
             self.emit(self.state())
 
     def on_message(self, msg) -> None:
+        self._last_activity = time.monotonic()
         self._maybe_reload()
         ctrl = Control.from_message(msg)
         if ctrl is None:

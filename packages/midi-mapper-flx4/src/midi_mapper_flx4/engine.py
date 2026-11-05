@@ -223,8 +223,11 @@ def input_names() -> list[str]:
     """Connected MIDI inputs; empty if the system has no MIDI support (e.g. Linux without ALSA)."""
     import mido
 
+    from . import midiwatch
+
+    midiwatch.start()
     try:
-        return mido.get_input_names()
+        return [n for n in mido.get_input_names() if n]  # a device that just vanished can show up nameless
     except Exception:  # noqa: BLE001 - rtmidi raises its own error types when no MIDI backend is available
         return []
 

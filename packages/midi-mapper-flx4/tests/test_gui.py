@@ -244,3 +244,25 @@ def test_reconnects_after_dj_app_closes(gui):
     )
     out.send(mido.Message("note_on", channel=0, note=11, velocity=127))
     assert wait_for(lambda: (tmp / "after.txt").exists()), "presses arrive on the new connection"
+
+
+def test_idle_connection_is_refreshed_quietly(gui, monkeypatch):
+    from midi_mapper_flx4 import runtime
+
+    server, out, _, tmp = gui
+    rt = server.runtime
+    first = rt._port
+    monkeypatch.setattr(runtime, "REFRESH_IDLE", 0.2)
+    rt._wake.set()
+    assert wait_for(lambda: rt._port is not None and rt._port is not first), "reopened while idle"
+    request(
+        server,
+        "POST",
+        "/api/mappings",
+        {
+            "control": {"kind": "note", "channel": 1, "number": 12},
+            "action": {"type": "shell", "value": f"echo ok >> {tmp / 'refreshed.txt'}"},
+        },
+    )
+    out.send(mido.Message("note_on", channel=0, note=12, velocity=127))
+    assert wait_for(lambda: (tmp / "refreshed.txt").exists()), "presses still arrive after a refresh"
