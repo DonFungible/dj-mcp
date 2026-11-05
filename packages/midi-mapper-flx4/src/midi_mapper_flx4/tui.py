@@ -18,7 +18,7 @@ from . import service
 from .config import ConfigError, Control, Mapping, load_config, mapping_from_json, mapping_to_json
 from .diagram import WIDTH, render
 from .engine import Executor, Mapper, input_names
-from .flx4 import DEVICE, control_id, control_name, is_jog
+from .flx4 import DEVICE, control_id, control_name, find_mapping, is_jog
 
 CLEAR, HOME, HIDE_CURSOR, SHOW_CURSOR = "\x1b[H\x1b[2J", "\x1b[H", "\x1b[?25l", "\x1b[?25h"
 CLEAR_LINE, CLEAR_BELOW = "\x1b[K", "\x1b[J"
@@ -154,10 +154,11 @@ class MapperUI:
         from .runtime import Runtime
 
         c = self.selected
-        if c is None or c not in self.mappings():
+        current = find_mapping(self.mappings(), c) if c else None
+        if current is None:
             self.message = "That control isn't mapped."
             return
-        Runtime(self.config, verbose=False).delete_mapping(c)
+        Runtime(self.config, verbose=False).delete_mapping(current.control)
         self.message = f"Removed the mapping for {control_name(c)}."
 
     # -------------------------------------------------------------- drawing
@@ -166,7 +167,7 @@ class MapperUI:
         out = [render({control_id(c) for c in maps}, self.selected, color=self.color), ""]
         if self.selected:
             c = self.selected
-            current = maps.get(c)
+            current = find_mapping(maps, c)
             out.append(f"{BOLD}{control_name(c)}{RESET}  {DIM}{control_id(c)}{RESET}")
             out.append(f"  does: {describe(current) if current else 'nothing yet'}")
             if is_jog(c):
@@ -276,10 +277,11 @@ class MapperUI:
 
         c = self.selected
         maps = self.mappings()
-        if c is None or c not in maps:
+        current = find_mapping(maps, c) if c else None
+        if current is None:
             self.message = "Map this control first."
             return
-        if is_jog(c) or c.kind == "cc" and maps[c].scroll is not None:
+        if is_jog(c) or c.kind == "cc" and current.scroll is not None:
             self.message = "Turn the jog wheel to try it."
             return
         if c.kind == "note":
@@ -287,7 +289,7 @@ class MapperUI:
         else:
             msg = mido.Message("control_change", channel=c.channel - 1, control=c.number, value=127)
         Mapper(load_config(self.config), Executor()).handle(msg)
-        self.message = f"Ran: {describe(maps[c])}"
+        self.message = f"Ran: {describe(current)}"
 
     # ----------------------------------------------------------------- loop
     def run(self) -> None:

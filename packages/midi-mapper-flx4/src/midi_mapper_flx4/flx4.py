@@ -82,6 +82,21 @@ def control_name(c: Control) -> str:
     return f"{c.kind} {c.number} on channel {c.channel}"
 
 
+def find_mapping(mappings: dict, c: Control):
+    """The mapping a control triggers. Pads send a different note in each pad mode (Hot Cue, Sampler...), and
+    the FLX4 drops back to Hot Cue mode when it's replugged or DJ software resets it, so a pad mapped in one
+    mode also answers in the others, unless that pad has its own mapping for the current mode."""
+    m = mappings.get(c)
+    if m is not None or c.kind != "note" or c.channel not in PAD_CHANNELS or c.number % 16 >= 8:
+        return m
+    pad = c.number % 16
+    for mode in range(len(PAD_MODES)):
+        m = mappings.get(Control("note", c.channel, mode * 16 + pad))
+        if m is not None:
+            return m
+    return None
+
+
 def control_id(c: Control) -> str:
     """Compact, stable id for tools: 'note:1:11'."""
     return f"{c.kind}:{c.channel}:{c.number}"

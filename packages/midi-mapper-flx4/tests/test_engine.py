@@ -161,3 +161,18 @@ def test_app_command():
 
     cmd = app_command("Discord")
     assert cmd[-1] == ("discord" if sys.platform not in ("darwin", "win32") else "Discord")
+
+
+def test_pad_mappings_work_in_every_pad_mode():
+    from midi_mapper_flx4.config import mapping_block, parse_config
+
+    text = mapping_block(Control("note", 10, 49), {"app": "Linear"})  # deck 2 Sampler pad 2
+    text += mapping_block(Control("note", 10, 3), {"app": "Notes"})  # deck 2 Hot Cue pad 4, mapped on its own
+    text += mapping_block(Control("note", 10, 51), {"app": "Mail"})  # deck 2 Sampler pad 4
+    m = Mapper(parse_config(text), Recorder())
+    for note in (49, 1, 17):  # Sampler, Hot Cue and Pad FX mode: pad 2 every time
+        m.handle(mido.Message("note_on", channel=9, note=note, velocity=127))
+    m.handle(mido.Message("note_on", channel=9, note=3, velocity=127))  # Hot Cue pad 4 has its own mapping
+    m.handle(mido.Message("note_on", channel=9, note=19, velocity=127))  # Pad FX pad 4: the first mapping found
+    m.handle(mido.Message("note_on", channel=7, note=1, velocity=127))  # deck 1 pads are separate
+    assert calls(m) == [("app", "Linear")] * 3 + [("app", "Notes"), ("app", "Notes")]

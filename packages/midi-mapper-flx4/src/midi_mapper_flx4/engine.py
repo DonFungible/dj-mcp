@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import Config, Control, Mapping, parse_combo
+from .flx4 import find_mapping
 
 SHELL_LOG = Path.home() / ".config" / "midi-mapper-flx4" / "shell.log"
 
@@ -122,7 +123,7 @@ class Mapper:
 
     def handle(self, msg) -> Mapping | None:
         ctrl = Control.from_message(msg)
-        m = self.config.mappings.get(ctrl) if ctrl else None
+        m = find_mapping(self.config.mappings, ctrl) if ctrl else None
         if m is None:
             return None
         ex = self.executor

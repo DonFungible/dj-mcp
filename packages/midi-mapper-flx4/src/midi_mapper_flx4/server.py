@@ -21,7 +21,7 @@ from . import service
 from .config import DEFAULT_CONFIG, Config, ConfigError, Control, load_config, mapping_from_json, mapping_to_json
 from .diagram import render
 from .engine import Executor, Mapper, accessibility_trusted, input_names
-from .flx4 import DEVICE, control_id, control_name, is_jog, parse_control_id
+from .flx4 import DEVICE, control_id, control_name, find_mapping, is_jog, parse_control_id
 from .runtime import Runtime
 
 mcp = MCPServer(
@@ -144,7 +144,7 @@ def wait_for_button(timeout_seconds: int = 60) -> dict[str, Any]:
     if ctrl is None:
         raise ToolError(f"No button was pressed within {timeout} seconds.")
     mappings = _config().mappings
-    current = mappings.get(ctrl)
+    current = find_mapping(mappings, ctrl)
     return {
         "id": control_id(ctrl),
         "control_name": control_name(ctrl),
@@ -252,10 +252,10 @@ def map_button(
 def unmap_button(control: str) -> dict[str, Any]:
     """Remove a control's mapping. control: id like "note:1:11" (from status or wait_for_button)."""
     ctrl = parse_control_id(control)
-    current = _config().mappings.get(ctrl)
+    current = find_mapping(_config().mappings, ctrl)
     if current is None:
         raise ToolError(f"{control_name(ctrl)} isn't mapped.")
-    _editor().delete_mapping(ctrl)
+    _editor().delete_mapping(current.control)
     return {"removed": _describe(current)}
 
 
@@ -263,7 +263,7 @@ def unmap_button(control: str) -> dict[str, Any]:
 def test_mapping(control: str) -> dict[str, Any]:
     """Carry out a button's mapped action once, right now, as if it had been pressed (not for jog wheels)."""
     ctrl = parse_control_id(control)
-    m = _config().mappings.get(ctrl)
+    m = find_mapping(_config().mappings, ctrl)
     if m is None:
         raise ToolError(f"{control_name(ctrl)} isn't mapped.")
     if m.scroll is not None or m.keys_cw is not None:

@@ -11,7 +11,7 @@ from pathlib import Path
 from . import service
 from .config import Config, Control, Mapping, load_config, parse_config, render_config
 from .engine import Executor, Mapper, PauseWatcher, input_names, log
-from .flx4 import control_id, control_name
+from .flx4 import control_id, control_name, find_mapping
 
 POLL_SECONDS = 2.0
 # While the controller is idle, reopen its connection this often. A quick replug or DJ software resetting the
@@ -221,7 +221,7 @@ class Runtime:
         ctrl = Control.from_message(msg)
         if ctrl is None:
             return
-        mapping = self.config.mappings.get(ctrl)
+        mapping = find_mapping(self.config.mappings, ctrl)
         fired = False
         if self.learning:
             pass  # pressing a control to learn it must not trigger its current action
@@ -233,6 +233,8 @@ class Runtime:
                 self.emit({"type": "error", "message": f"{mapping.label if mapping else ctrl}: {e}"})
             if fired and self.verbose and mapping.scroll is None and mapping.keys_cw is None:
                 log(f"→ {mapping.label}")
+            elif mapping is None and self.verbose and ctrl.kind == "note":
+                log(f"pressed {control_name(ctrl)} (not mapped)")
 
         now = time.monotonic()
         if ctrl.kind == "cc" and now - self._last_emit.get(ctrl, 0) < EVENT_MIN_INTERVAL and not self.learning:
