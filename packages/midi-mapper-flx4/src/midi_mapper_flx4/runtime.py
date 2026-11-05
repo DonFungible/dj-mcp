@@ -36,7 +36,8 @@ class Runtime:
         self._stop = threading.Event()
         self._wake = threading.Event()
         self.devices: list[str] = []
-        self.watcher = PauseWatcher(self.config.pause_when_running, on_change=self.emit_state)
+        self._reconnect = False
+        self.watcher = PauseWatcher(self.config.pause_when_running, on_change=self._on_pause_change)
 
     # ------------------------------------------------------------- lifecycle
     def start(self) -> None:
@@ -74,11 +75,13 @@ class Runtime:
                     self.devices = names
                     self.emit_state()
                 wanted = next((n for n in names if self.config.device.lower() in n.lower()), None)
-                if self._port is not None and wanted != self.port_name:
+                if self._port is not None and (wanted != self.port_name or self._reconnect):
                     self._port.close()
                     self._port, self.port_name = None, None
-                    log("controller disconnected")
+                    if not self._reconnect:
+                        log("controller disconnected")
                     self.emit_state()
+                self._reconnect = False
                 if self._port is None and wanted:
                     self._port = mido.open_input(wanted, callback=self.on_message)
                     self.port_name = wanted
@@ -88,6 +91,16 @@ class Runtime:
                 log("device check failed:", e)
             self._wake.wait(POLL_SECONDS)
             self._wake.clear()
+
+    def _on_pause_change(self) -> None:
+        # DJ software resets the controller, and macOS then hands out a fresh MIDI connection under the same name,
+        # leaving ours silently dead. Reopen it whenever the DJ app closes.
+        watcher = getattr(self, "watcher", None)  # unset when the DJ app is already open at startup
+        if watcher is not None and not watcher.paused and self._port is not None:
+            self._reconnect = True
+            self._wake.set()
+            log("reconnecting to the controller after the DJ app closed")
+        self.emit_state()
 
     # ----------------------------------------------------------------- state
     @property

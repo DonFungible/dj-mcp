@@ -224,3 +224,23 @@ def test_state_has_flx4_names(gui):
     m = server.runtime.state()["mappings"][0]
     assert m["control_name"] == "Deck 1 Play/Pause" and m["id"] == "note:1:11"
     assert m["action"] == {"type": "app", "value": "Discord"}
+
+
+def test_reconnects_after_dj_app_closes(gui):
+    server, out, _, tmp = gui
+    rt = server.runtime
+    first = rt._port
+    rt.watcher.running_app = None  # the DJ app just quit
+    rt._on_pause_change()
+    assert wait_for(lambda: rt._port is not None and rt._port is not first), "reopened the controller"
+    request(
+        server,
+        "POST",
+        "/api/mappings",
+        {
+            "control": {"kind": "note", "channel": 1, "number": 11},
+            "action": {"type": "shell", "value": f"echo ok >> {tmp / 'after.txt'}"},
+        },
+    )
+    out.send(mido.Message("note_on", channel=0, note=11, velocity=127))
+    assert wait_for(lambda: (tmp / "after.txt").exists()), "presses arrive on the new connection"
