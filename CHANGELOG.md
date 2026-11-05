@@ -39,6 +39,8 @@ Each package is released separately; entries are grouped by package.
 - `midi-mapper-flx4 map`: an interactive drawing of the FLX4 in the terminal that lights up the control you
   press and lets you map it on the spot. The MCP tools return the same drawing.
 - Record a key combo by pressing it (`map`, and the `record_keys` MCP tool) instead of typing `cmd+shift+]`.
+- Menu actions: `menu = "App > Menu > Item"` for buttons and `menu_cw`/`menu_ccw` for jog wheels, for menu
+  items that have no keyboard shortcut (e.g. stepping through terminal sessions).
 - Jog wheel sensitivity: turn mappings fire once per 24 ticks of movement by default, adjustable per mapping
   with `ticks`.
 - Asks macOS to show its Accessibility / Input Monitoring prompts when a mapping or recording needs them

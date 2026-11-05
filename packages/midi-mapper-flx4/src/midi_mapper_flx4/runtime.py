@@ -231,7 +231,13 @@ class Runtime:
             except Exception as e:  # noqa: BLE001 - one bad action shouldn't stop the mapper
                 log(f"error in {mapping.label if mapping else ctrl}: {e}")
                 self.emit({"type": "error", "message": f"{mapping.label if mapping else ctrl}: {e}"})
-            if fired and self.verbose and mapping.scroll is None and mapping.keys_cw is None:
+            if (
+                fired
+                and self.verbose
+                and mapping.scroll is None
+                and mapping.keys_cw is None
+                and mapping.menu_cw is None
+            ):
                 log(f"→ {mapping.label}")
             elif mapping is None and self.verbose and ctrl.kind == "note":
                 log(f"pressed {control_name(ctrl)} (not mapped)")

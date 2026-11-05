@@ -27,6 +27,22 @@ def app_command(name: str) -> list[str]:
 MAX_STEPS_PER_MESSAGE = 10  # cap repeats from one fast jog flick
 
 
+def menu_script(path: str) -> str:
+    """AppleScript that chooses a menu item: "Window > Next Session" in the front app, or "App > Window > Next
+    Session" (the app by name, display name or bundle id). Extra levels are submenus."""
+    parts = [p.strip().replace("\\", "\\\\").replace('"', '\\"') for p in path.split(">") if p.strip()]
+    app, menus = (parts[0], parts[1:]) if len(parts) >= 3 else (None, parts)
+    if app:
+        proc = f'first process whose name is "{app}" or displayed name is "{app}" or bundle identifier is "{app}"'
+    else:
+        proc = "first process whose frontmost is true"
+    ref = f'menu item "{menus[-1]}"'
+    for sub in reversed(menus[1:-1]):
+        ref += f' of menu 1 of menu item "{sub}"'
+    ref += f' of menu 1 of menu bar item "{menus[0]}" of menu bar 1'
+    return f'tell application "System Events" to tell ({proc}) to click {ref}'
+
+
 def log(*parts: object) -> None:
     print(f"{datetime.now():%H:%M:%S}", *parts, flush=True)
 
@@ -97,6 +113,25 @@ class Executor:
             app_command(name), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True
         )
 
+    def menu(self, path: str) -> None:
+        """Choose a menu item (System Events; needs Accessibility). Runs in order on a worker thread."""
+        if self.dry_run:
+            log(f"  [dry-run] menu {path!r}")
+            return
+        if not hasattr(self, "_menu_queue"):
+            import queue
+
+            self._menu_queue: queue.Queue[str] = queue.Queue()
+            threading.Thread(target=self._menu_worker, daemon=True).start()
+        self._menu_queue.put(path)
+
+    def _menu_worker(self) -> None:
+        while True:
+            path = self._menu_queue.get()
+            result = subprocess.run(["osascript", "-e", menu_script(path)], capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                log(f"menu {path!r} failed: {result.stderr.strip()}")
+
     def scroll(self, lines: int) -> None:
         if self.dry_run:
             log(f"  [dry-run] scroll {lines:+d}")
@@ -127,7 +162,7 @@ class Mapper:
         if m is None:
             return None
         ex = self.executor
-        if m.scroll is not None or m.keys_cw is not None:
+        if m.scroll is not None or m.keys_cw is not None or m.menu_cw is not None:
             delta = relative_delta(msg.value, m.encoding)
             if delta == 0:
                 return None
@@ -144,6 +179,9 @@ class Mapper:
                 return None
             if m.scroll is not None:
                 ex.scroll(steps * m.scroll * (1 if delta > 0 else -1))
+            elif m.menu_cw is not None:
+                for _ in range(steps):
+                    ex.menu(m.menu_cw if delta > 0 else m.menu_ccw)
             else:
                 ex.keys(m.keys_cw if delta > 0 else m.keys_ccw, times=steps)
             return m
@@ -157,6 +195,8 @@ class Mapper:
             ex.shell(m.shell)
         elif m.app:
             ex.app(m.app)
+        elif m.menu:
+            ex.menu(m.menu)
         return m
 
 

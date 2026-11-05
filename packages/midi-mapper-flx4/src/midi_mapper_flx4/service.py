@@ -74,7 +74,7 @@ def write_status(config: Path, can_type: bool | None) -> None:
 
 def needs_keystrokes(m) -> bool:
     """Whether a mapping sends keystrokes or scrolls (which macOS gates behind Accessibility)."""
-    return any(v is not None for v in (m.keys, m.text, m.scroll, m.keys_cw))
+    return any(v is not None for v in (m.keys, m.text, m.scroll, m.keys_cw, m.menu, m.menu_cw))
 
 
 def status_file(config: Path) -> Path:

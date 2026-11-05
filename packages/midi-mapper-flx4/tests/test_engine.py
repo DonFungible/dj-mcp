@@ -176,3 +176,31 @@ def test_pad_mappings_work_in_every_pad_mode():
     m.handle(mido.Message("note_on", channel=9, note=19, velocity=127))  # Pad FX pad 4: the first mapping found
     m.handle(mido.Message("note_on", channel=7, note=1, velocity=127))  # deck 1 pads are separate
     assert calls(m) == [("app", "Linear")] * 3 + [("app", "Notes"), ("app", "Notes")]
+
+
+def test_menu_actions():
+    from midi_mapper_flx4.config import ConfigError, mapping_block, parse_config
+    from midi_mapper_flx4.engine import menu_script
+
+    class Menus(Recorder):
+        def menu(self, path):
+            self.calls.append(("menu", path))
+
+    text = mapping_block(
+        Control("cc", 2, 34),
+        {"menu_cw": "Rex > Window > Next Session", "menu_ccw": "Rex > Window > Previous Session", "ticks": 2},
+    )
+    text += mapping_block(Control("note", 1, 12), {"menu": "Edit > Paste"})
+    m = Mapper(parse_config(text), Menus())
+    for value in (65, 65, 63, 63):
+        m.handle(mido.Message("control_change", channel=1, control=34, value=value))
+    m.handle(mido.Message("note_on", channel=0, note=12, velocity=127))
+    assert calls(m) == [
+        ("menu", "Rex > Window > Next Session"),
+        ("menu", "Rex > Window > Previous Session"),
+        ("menu", "Edit > Paste"),
+    ]
+    assert 'of menu bar item "Window"' in menu_script("Rex > Window > Next Session")
+    assert "first process whose frontmost is true" in menu_script("Edit > Paste")
+    with pytest.raises(ConfigError, match="App > Menu > Item"):
+        parse_config(mapping_block(Control("note", 1, 1), {"menu": "Paste"}))

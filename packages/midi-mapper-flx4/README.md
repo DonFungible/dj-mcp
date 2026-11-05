@@ -67,9 +67,10 @@ prompt once, then opens System Settings instead.
 | App | `Discord` | Opens the app, or brings it to the front if it's already open |
 | Keys | `cmd+shift+p` | Presses a combo. Modifiers: `cmd`, `ctrl`, `alt`/`option`, `shift`. Keys: letters, digits, punctuation, `enter`, `esc`, `tab`, `space`, `backspace`, `delete`, arrows (`up`…), `home`, `end`, `pageup`, `pagedown`, `f1`–`f20`, `plus` |
 | Text | `/clear` + Enter | Types text; each line break presses Enter |
+| Menu | `Window > Next Session` | Chooses a menu item in the front app, or in a named app: `Rex > Window > Next Session`. Works for menu items that have no keyboard shortcut |
 | Command | `say done` | Runs a shell command in the background; output goes to `~/.config/midi-mapper-flx4/shell.log` |
 | Scroll | 3 lines per step | Jog wheels: scrolls the window under the mouse |
-| Turn | `down` / `up` | Jog wheels: a combo per clockwise or counter-clockwise step |
+| Turn | `down` / `up` | Jog wheels: a combo per clockwise or counter-clockwise step (`keys_cw`/`keys_ccw`), or a menu item per step (`menu_cw`/`menu_ccw`) |
 
 Shift + a button counts as a separate button, so each one can do two things. Buttons fire on press, not
 release.

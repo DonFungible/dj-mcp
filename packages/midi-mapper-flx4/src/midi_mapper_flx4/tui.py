@@ -91,7 +91,11 @@ def describe(m: Mapping) -> str:
     a = mapping_to_json(m)["action"]
     if a["type"] == "turn":
         return f"turn: {a['cw']} clockwise, {a['ccw']} counter-clockwise"
-    what = {"app": "open", "keys": "press", "text": "type", "shell": "run", "scroll": "scroll"}[a["type"]]
+    if a["type"] == "turn_menu":
+        return f"turn: menu {a['cw']} clockwise, {a['ccw']} counter-clockwise"
+    what = {"app": "open", "keys": "press", "text": "type", "shell": "run", "scroll": "scroll", "menu": "menu"}[
+        a["type"]
+    ]
     value = repr(a["value"]) if a["type"] == "text" else a["value"]
     suffix = " lines per step" if a["type"] == "scroll" else ""
     return f"{what} {value}{suffix}" + (f'  ("{m.name}")' if m.name else "")
