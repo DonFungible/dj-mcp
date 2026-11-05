@@ -105,6 +105,15 @@ def cmd_permissions(_args) -> None:
         print("mapper: midi-mapper-flx4 stop, then start it again from this terminal.")
 
 
+def cmd_start(args) -> None:
+    from .service import running_pid, start_background
+
+    ensure_config(args.config)
+    already = running_pid(args.config)
+    pid = start_background(args.config)
+    print(f"The mapper is already running (pid {pid})." if already else f"Started the mapper (pid {pid}).")
+
+
 def cmd_stop(args) -> None:
     from .service import stop_background
 
@@ -167,6 +176,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--no-browser", action="store_true", help="print the link instead of opening it")
     p.add_argument("--dry-run", action="store_true", help="log actions instead of performing them")
     p.set_defaults(func=cmd_gui)
+    sub.add_parser("start", help="start the mapper in the background").set_defaults(func=cmd_start)
     sub.add_parser("stop", help="stop a mapper running in the background").set_defaults(func=cmd_stop)
     sub.add_parser(
         "permissions", help="ask macOS for the permissions keystrokes and shortcut recording need"

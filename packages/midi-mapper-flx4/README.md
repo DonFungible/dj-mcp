@@ -129,6 +129,7 @@ button through MCP.
 ```sh
 uvx --python 3.12 midi-mapper-flx4 gui      # browser editor; also runs the mappings while it's open
 uvx --python 3.12 midi-mapper-flx4 run      # run the mappings in this terminal (add --dry-run to log only)
+uvx --python 3.12 midi-mapper-flx4 start    # start the mapper in the background
 uvx --python 3.12 midi-mapper-flx4 status   # is the mapper running and the FLX4 connected?
 uvx --python 3.12 midi-mapper-flx4 stop     # stop the background mapper
 uvx --python 3.12 midi-mapper-flx4 check    # validate the config and list mappings
