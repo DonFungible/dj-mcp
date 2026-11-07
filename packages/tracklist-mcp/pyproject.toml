@@ -1,0 +1,52 @@
+[project]
+name = "tracklist-mcp"
+version = "0.1.0"
+description = "Turn a YouTube DJ mix into a timestamped tracklist, including blends, layered tracks and acapellas"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Don Fung" }]
+keywords = ["mcp", "dj", "tracklist", "shazam", "demucs", "youtube", "claude", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "mcp>=2.0,<3",
+    "yt-dlp[default]>=2025.10",
+    "shazamio>=0.9",
+    "soundfile>=0.12",
+    "numpy>=1.26",
+    "demucs>=4.0.1",
+    # Newer torch has no Intel-Mac wheels, so without this the lock settles on torch 2.2 for every platform,
+    # which was built against NumPy 1 and can't run with NumPy 2.
+    "torch>=2.5; sys_platform != 'darwin' or platform_machine == 'arm64'",
+    "numpy<2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "faster-whisper>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DonFungible/dj-mcp/tree/main/packages/tracklist-mcp"
+Repository = "https://github.com/DonFungible/dj-mcp"
+Issues = "https://github.com/DonFungible/dj-mcp/issues"
+
+[project.scripts]
+tracklist-mcp = "tracklist_mcp.server:main"
+tracklist = "tracklist_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tracklist_mcp"]

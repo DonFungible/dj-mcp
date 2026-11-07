@@ -35,6 +35,8 @@ packages/
                     service.py (background mapper, button capture), server.py (MCP), gui.py + web/index.html
   serato-mcp/       binary.py, tags.py, sqlite.py, library.py (Serato's formats), writer.py (crate/metadata edits),
                     keys.py, planner.py (set planning), coremidi.py, midi.py, app.py (deck and app control), server.py
+  tracklist-mcp/    audio.py (download, Demucs stems, clips), recognize.py (Shazam with pacing and cache),
+                    timeline.py (probes -> overlapping plays), pipeline.py, cli.py, server.py
 ```
 
 Keep logic in plain modules that can be tested without MCP, and keep `server.py` thin.
