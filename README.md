@@ -9,6 +9,7 @@ rekordbox, Serato and Spotify, plus one that turns a Pioneer DDJ-FLX4 into a mac
 | [**serato-mcp**](packages/serato-mcp) | Search your Serato library with cues and Mixed In Key energy, manage crates, plan harmonic sets, read play history, and drive the decks over MIDI (macOS) | `uvx serato-mcp` |
 | [**spotify-dj-mcp**](packages/spotify-dj-mcp) | Browse your Spotify playlists and Liked Songs, and turn them into a DJ set from the tracks you own in rekordbox | `uvx spotify-dj-mcp` |
 | [**midi-mapper-flx4**](packages/midi-mapper-flx4) | Press a button on your DDJ-FLX4 and tell the AI what it should do ("open Discord"). Maps buttons, pads and jog wheels to apps, key combos, text and commands; also has a browser-based editor | `uvx --python 3.12 midi-mapper-flx4` |
+| [**tracklist-mcp**](packages/tracklist-mcp) | Paste a YouTube/SoundCloud/Mixcloud link to a DJ mix and get a timestamped tracklist, including blends, layered tracks and acapellas over other tracks | `uvx tracklist-mcp` |
 
 Ask things like:
 
@@ -16,6 +17,7 @@ Ask things like:
 - *"Order my Tech House playlist into a set that builds energy, and tell me which transitions are hard."*
 - *"Which of my Spotify Liked Songs do I already own? Build a peak-time set from them and list the rest."*
 - *"I'm going to press a button on my FLX4. Make it open Discord."*
+- *"What's the tracklist of https://www.youtube.com/watch?v=…? Note any acapellas."*
 
 ## Quick start
 
@@ -45,6 +47,10 @@ Open **Settings → Developer → Edit Config** and add the servers you want:
     "flx4": {
       "command": "uvx",
       "args": ["--python", "3.12", "midi-mapper-flx4"]
+    },
+    "tracklist": {
+      "command": "uvx",
+      "args": ["tracklist-mcp"]
     }
   }
 }
@@ -60,6 +66,7 @@ claude mcp add rekordbox -- uvx rekordbox-mcp
 claude mcp add serato -- uvx serato-mcp
 claude mcp add spotify -e SPOTIFY_CLIENT_ID=your-client-id -- uvx spotify-dj-mcp
 claude mcp add flx4 -- uvx --python 3.12 midi-mapper-flx4
+claude mcp add tracklist -- uvx tracklist-mcp
 ```
 
 ### Cursor, Windsurf, VS Code and other MCP clients

@@ -3,13 +3,14 @@ name = "dj-mcp"
 version = "0.1.0"
 description = "MCP servers for DJ software (Rekordbox, Serato, ...)"
 requires-python = ">=3.11"
-dependencies = ["rekordbox-mcp", "serato-mcp", "midi-mapper-flx4", "spotify-dj-mcp"]
+dependencies = ["rekordbox-mcp", "serato-mcp", "midi-mapper-flx4", "spotify-dj-mcp", "tracklist-mcp"]
 
 [tool.uv.sources]
 rekordbox-mcp = { workspace = true }
 midi-mapper-flx4 = { workspace = true }
 serato-mcp = { workspace = true }
 spotify-dj-mcp = { workspace = true }
+tracklist-mcp = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -25,7 +26,7 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["rekordbox_mcp", "serato_mcp", "midi_mapper_flx4", "spotify_dj_mcp"]
+known-first-party = ["rekordbox_mcp", "serato_mcp", "midi_mapper_flx4", "spotify_dj_mcp", "tracklist_mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["packages"]

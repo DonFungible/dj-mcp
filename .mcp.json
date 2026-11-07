@@ -33,6 +33,13 @@
         "run",
         "midi-mapper-flx4"
       ]
+    },
+    "tracklist": {
+      "command": "uv",
+      "args": [
+        "run",
+        "tracklist-mcp"
+      ]
     }
   }
 }
